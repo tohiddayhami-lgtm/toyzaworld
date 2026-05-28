@@ -30,6 +30,33 @@
         }
       }
     </script>
+    <!-- Firebase Analytics -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+      import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyA7_yhgxYtUb_2YroHjzF_fO_CIsWCOxg8",
+        authDomain: "toyzaworld.firebaseapp.com",
+        projectId: "toyzaworld",
+        storageBucket: "toyzaworld.firebasestorage.app",
+        messagingSenderId: "604394849927",
+        appId: "1:604394849927:web:dbf979ca814ff596669a22",
+        measurementId: "G-LS0KW2MR1P"
+      };
+
+      const firebaseApp = initializeApp(firebaseConfig);
+
+      isSupported()
+        .then((supported) => {
+          if (supported) {
+            getAnalytics(firebaseApp);
+          }
+        })
+        .catch(() => {
+          // Analytics can be unavailable in restricted browsers or preview environments.
+        });
+    </script>
     <!-- Custom CSS styles -->
     <style>
       body {
