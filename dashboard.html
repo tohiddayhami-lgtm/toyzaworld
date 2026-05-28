@@ -75,6 +75,10 @@
 
             <div id="status" class="hidden mb-4 text-xs font-bold p-3 rounded"></div>
 
+            <button id="restore-default-map" type="button" class="w-full mb-4 px-4 py-2 bg-toyOrange text-deepNavy border-2 border-deepNavy rounded text-xs font-bold uppercase hover:bg-deepNavy hover:text-white transition-all">
+              Restore Current Website Categories
+            </button>
+
             <form id="site-info-form" class="grid grid-cols-1 sm:grid-cols-2 gap-3 border-2 border-slateLines rounded p-4 mb-4">
               <h2 class="sm:col-span-2 font-bold text-xs uppercase tracking-wider">Website Info</h2>
               <input id="site-heroLine1" type="text" placeholder="Hero title line 1" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
@@ -185,6 +189,53 @@
         footerCopyright: '© 2026 Toyza World B.V. — Amsterdam, Netherlands. All rights reserved.',
         footerTagline: 'Play Without Borders.'
       };
+      const defaultNodes = [
+        { id: 'root', label: 'TOYZA WORLD', parent: null, level: 0, type: 'root', desc: 'Click Toyza World to open the country map. Each country contains toy categories, and each category contains editable brand website targets.' },
+        { id: 'cn', label: '🇨🇳 China', parent: 'root', level: 1, type: 'countries', desc: 'Large-scale toy production for educational, electronic, plush, and wooden toy sourcing.' },
+        { id: 'id', label: '🇮🇩 Indonesia', parent: 'root', level: 1, type: 'countries', desc: 'Strong sourcing route for wooden toys, eco-friendly craft items, and retail toy distributors.' },
+        { id: 'dk', label: '🇩🇰 Denmark', parent: 'root', level: 1, type: 'countries', desc: 'Premium construction toys, creative brick systems, and educational play brands.' },
+        { id: 'de', label: '🇩🇪 Germany', parent: 'root', level: 1, type: 'countries', desc: 'High-quality wooden, educational, and preschool toy suppliers with EU compliance.' },
+        { id: 'jp', label: '🇯🇵 Japan', parent: 'root', level: 1, type: 'countries', desc: 'Character figures, puzzles, model kits, collectible toys, and precision play products.' },
+        { id: 'us', label: '🇺🇸 USA', parent: 'root', level: 1, type: 'countries', desc: 'Global brand owners for action figures, board games, dolls, and preschool toys.' },
+        { id: 'vn', label: '🇻🇳 Vietnam', parent: 'root', level: 1, type: 'countries', desc: 'Growing supplier base for plush toys, wooden toys, and export-ready toy production.' },
+        { id: 'cn_edu', label: '🧠 Educational Toys', parent: 'cn', level: 2, type: 'categories', desc: 'STEM kits, learning tablets, coding toys, and classroom-focused play sets from China.' },
+        { id: 'cn_elec', label: '🤖 Electronic Toys', parent: 'cn', level: 2, type: 'categories', desc: 'Robots, interactive sound toys, RC toys, and sensor-based smart play products.' },
+        { id: 'cn_plush', label: '🧸 Plush & Soft Toys', parent: 'cn', level: 2, type: 'categories', desc: 'Soft dolls, plush characters, and high-volume textile toy production.' },
+        { id: 'id_wood', label: '🌳 Wooden Toys', parent: 'id', level: 2, type: 'categories', desc: 'Wooden blocks, puzzles, Montessori-style learning boards, and handmade play sets.' },
+        { id: 'id_eco', label: '♻️ Eco Craft Toys', parent: 'id', level: 2, type: 'categories', desc: 'Natural material craft sets, sustainable packaging, and eco-friendly toy collections.' },
+        { id: 'id_retail', label: '🏬 Retail Toy Sellers', parent: 'id', level: 2, type: 'categories', desc: 'Regional toy retailers and distributors suitable for partnership research.' },
+        { id: 'dk_blocks', label: '🧱 Construction Toys', parent: 'dk', level: 2, type: 'categories', desc: 'Interlocking bricks, creator systems, and architecture-inspired construction play.' },
+        { id: 'dk_edu', label: '🎓 Learning Systems', parent: 'dk', level: 2, type: 'categories', desc: 'Education-focused play products for schools, coding, and creative classrooms.' },
+        { id: 'de_wood', label: '🌲 Wooden Toys', parent: 'de', level: 2, type: 'categories', desc: 'Beechwood blocks, toddler toys, baby toys, and EU-compliant natural play items.' },
+        { id: 'de_puzzle', label: '🧩 Puzzles & Games', parent: 'de', level: 2, type: 'categories', desc: 'Family games, preschool puzzles, and board-game style learning products.' },
+        { id: 'de_preschool', label: '👶 Preschool Toys', parent: 'de', level: 2, type: 'categories', desc: 'Safe early-age toys focused on motor skills, sensory development, and role play.' },
+        { id: 'jp_figures', label: '🤖 Figures & Models', parent: 'jp', level: 2, type: 'categories', desc: 'Anime figures, model kits, collectible characters, and articulated robot toys.' },
+        { id: 'jp_puzzle', label: '🧩 Puzzle Toys', parent: 'jp', level: 2, type: 'categories', desc: 'Logic puzzles, mechanical puzzles, precision blocks, and brain-training toys.' },
+        { id: 'us_action', label: '🦸 Action Figures', parent: 'us', level: 2, type: 'categories', desc: 'Licensed heroes, character toys, story sets, and collectible figure lines.' },
+        { id: 'us_board', label: '🎲 Board Games', parent: 'us', level: 2, type: 'categories', desc: 'Family games, party games, strategy sets, and classic tabletop products.' },
+        { id: 'us_dolls', label: '👗 Dolls & Preschool', parent: 'us', level: 2, type: 'categories', desc: 'Fashion dolls, preschool characters, role-play toys, and infant play collections.' },
+        { id: 'vn_plush', label: '🧸 Plush Toys', parent: 'vn', level: 2, type: 'categories', desc: 'Export-ready stuffed toys, soft characters, and textile-based toy production.' },
+        { id: 'vn_wood', label: '🌳 Wooden Toys', parent: 'vn', level: 2, type: 'categories', desc: 'Wooden learning kits, block sets, puzzles, and small-batch natural toys.' },
+        { id: 'cn_edu_hape', label: 'Hape', parent: 'cn_edu', level: 3, type: 'brands', desc: 'Educational wooden and early learning toys with global distribution.', website: 'https://www.hape.com', brand: true },
+        { id: 'cn_edu_vtech', label: 'VTech Kids', parent: 'cn_edu', level: 3, type: 'brands', desc: 'Electronic learning toys, tablets, and preschool education devices.', website: 'https://www.vtechkids.com', brand: true },
+        { id: 'cn_elec_popmart', label: 'POP MART', parent: 'cn_elec', level: 3, type: 'brands', desc: 'Collectible designer toys, blind boxes, and character merchandise.', website: 'https://www.popmart.com', brand: true },
+        { id: 'cn_plush_aurora', label: 'Aurora World', parent: 'cn_plush', level: 3, type: 'brands', desc: 'Plush animals, character soft toys, and gift-focused plush collections.', website: 'https://auroragift.com', brand: true },
+        { id: 'id_wood_toyskingdom', label: 'Toys Kingdom Indonesia', parent: 'id_retail', level: 3, type: 'brands', desc: 'Indonesia-based toy retail chain and product discovery source.', website: 'https://www.toyskingdom.co.id', brand: true },
+        { id: 'id_wood_kiddo', label: 'Kiddo Indonesia', parent: 'id_wood', level: 3, type: 'brands', desc: 'Example slot for an Indonesian wooden toy brand or supplier website.', website: 'https://kiddo.id', brand: true },
+        { id: 'id_eco_plan', label: 'PlanToys', parent: 'id_eco', level: 3, type: 'brands', desc: 'Sustainable wooden toys and eco-conscious play products.', website: 'https://www.plantoys.com', brand: true },
+        { id: 'dk_blocks_lego', label: 'LEGO', parent: 'dk_blocks', level: 3, type: 'brands', desc: 'Global construction brick systems, creator sets, and educational series.', website: 'https://www.lego.com', brand: true },
+        { id: 'dk_edu_legoedu', label: 'LEGO Education', parent: 'dk_edu', level: 3, type: 'brands', desc: 'School learning systems, robotics, STEM lessons, and classroom kits.', website: 'https://education.lego.com', brand: true },
+        { id: 'de_wood_haba', label: 'HABA', parent: 'de_wood', level: 3, type: 'brands', desc: 'German wooden toys, baby toys, blocks, and family games.', website: 'https://www.haba-play.com', brand: true },
+        { id: 'de_preschool_playmobil', label: 'Playmobil', parent: 'de_preschool', level: 3, type: 'brands', desc: 'Role-play worlds, figures, vehicles, and preschool-friendly sets.', website: 'https://www.playmobil.com', brand: true },
+        { id: 'de_puzzle_ravensburger', label: 'Ravensburger', parent: 'de_puzzle', level: 3, type: 'brands', desc: 'Premium puzzles, family games, and educational tabletop products.', website: 'https://www.ravensburger.com', brand: true },
+        { id: 'jp_figures_bandai', label: 'Bandai', parent: 'jp_figures', level: 3, type: 'brands', desc: 'Model kits, character figures, anime toys, and collectible play lines.', website: 'https://www.bandai.com', brand: true },
+        { id: 'jp_puzzle_tomy', label: 'TOMY', parent: 'jp_puzzle', level: 3, type: 'brands', desc: 'Classic toys, puzzle toys, model play, and character-based products.', website: 'https://www.tomy.com', brand: true },
+        { id: 'us_action_hasbro', label: 'Hasbro', parent: 'us_action', level: 3, type: 'brands', desc: 'Action figures, role-play brands, blasters, and major licensed toy lines.', website: 'https://shop.hasbro.com', brand: true },
+        { id: 'us_board_hasbro', label: 'Hasbro Gaming', parent: 'us_board', level: 3, type: 'brands', desc: 'Classic board games, party games, and family tabletop products.', website: 'https://shop.hasbro.com/en-us/hasbro-gaming', brand: true },
+        { id: 'us_dolls_mattel', label: 'Mattel', parent: 'us_dolls', level: 3, type: 'brands', desc: 'Fashion dolls, preschool brands, vehicles, and global character toys.', website: 'https://www.mattel.com', brand: true },
+        { id: 'vn_plush_ty', label: 'Ty', parent: 'vn_plush', level: 3, type: 'brands', desc: 'Plush collectibles and soft toy product lines.', website: 'https://shop.ty.com', brand: true },
+        { id: 'vn_wood_janod', label: 'Janod', parent: 'vn_wood', level: 3, type: 'brands', desc: 'Wooden toys, puzzles, and design-led early learning collections.', website: 'https://www.janod.com', brand: true }
+      ];
 
       function showStatus(message, isError = false) {
         const box = $('status');
@@ -249,10 +300,7 @@
       }
 
       async function loadDefaultNodesFromIndex() {
-        const html = await fetch('index.html').then((response) => response.text());
-        const match = html.match(/const NODES = (\[[\s\S]*?\n\s*\];)/) || html.match(/const NODES = (\[[\s\S]*?\]);/);
-        if (!match) return [];
-        return new Function(`return ${match[1].replace(/;\s*$/, '')}`)();
+        return defaultNodes.map((node) => ({ ...node }));
       }
 
       function mergeNodes(defaultNodes, savedNodes) {
@@ -327,10 +375,10 @@
         $('category-count').textContent = visible.filter((node) => node.type === 'categories').length;
         $('brand-count').textContent = visible.filter((node) => node.type === 'brands' && node.brand).length;
 
-        const editable = nodes.filter((node) => node.id !== 'root' && !node.deleted);
+        const editable = nodes.filter((node) => node.id !== 'root');
         const previous = $('node-select').value;
         $('node-select').innerHTML = editable.map((node) => (
-          `<option value="${node.id}" ${node.id === previous ? 'selected' : ''}>${node.type}: ${node.label}${node.hidden ? ' (hidden)' : ''}</option>`
+          `<option value="${node.id}" ${node.id === previous ? 'selected' : ''}>${node.type}: ${node.label}${node.hidden ? ' (hidden)' : ''}${node.deleted ? ' (deleted)' : ''}</option>`
         )).join('');
         if (!$('node-select').value && editable[0]) $('node-select').value = editable[0].id;
         syncSelectedNode();
@@ -358,6 +406,10 @@
       $('signout').addEventListener('click', () => signOut(auth));
       $('node-select').addEventListener('change', syncSelectedNode);
       $('new-type').addEventListener('change', () => fillParentSelect($('new-parent'), $('new-type').value));
+      $('restore-default-map').addEventListener('click', async () => {
+        nodes = defaultNodes.map((node) => ({ ...node }));
+        await saveNodes('Current website categories restored.');
+      });
 
       $('site-info-form').addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -379,6 +431,7 @@
           node.desc = $('node-desc').value.trim();
           node.parent = $('node-parent').value || node.parent;
           node.hidden = $('node-hidden').checked;
+          node.deleted = false;
           if (node.type === 'brands') {
             node.website = $('node-website').value.trim() ? normalizeUrl($('node-website').value) : '';
             node.brand = true;
