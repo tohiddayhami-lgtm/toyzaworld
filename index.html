@@ -197,7 +197,7 @@
               Interactive Toy Map
             </h2>
             <p class="font-sans text-sm sm:text-base text-deepNavy/80 mt-1 max-w-xl">
-              Navigate Toyza World's current active sourcing footprint. Drag to pan, scroll to zoom, and click nodes to open detailed catalog information.
+              Click Toyza World to open countries, then choose a country, toy category, and brand website target. Drag to pan and scroll to zoom.
             </p>
           </div>
           
@@ -548,6 +548,33 @@
           </p>
         </div>
 
+        <!-- Brand Website Link -->
+        <div id="panel-website-wrap" class="hidden">
+          <h4 class="font-sans font-extrabold text-[#1D3557] text-[11px] uppercase tracking-wider mb-2">Brand Website</h4>
+          <a id="panel-website" href="#" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between gap-3 bg-white border-2 border-deepNavy p-3 rounded text-xs font-sans font-bold text-brandRed shadow-[3px_3px_0px_#1D3557] hover:bg-brandRed hover:text-white transition-all">
+            <span id="panel-website-label">Open website</span>
+            <span class="text-base leading-none">↗</span>
+          </a>
+        </div>
+
+        <!-- Add Brand Form -->
+        <div id="panel-brand-editor" class="hidden bg-warmOffwhite border-2 border-deepNavy p-4 rounded shadow-[3px_3px_0px_rgba(29,53,87,0.12)]">
+          <h4 class="font-sans font-extrabold text-[#1D3557] text-[11px] uppercase tracking-wider mb-3">Add Brand To This Category</h4>
+          <form onsubmit="handleBrandAdd(event)" class="flex flex-col gap-3">
+            <div>
+              <label class="block text-[9px] font-bold uppercase text-deepNavy mb-1">Brand Name</label>
+              <input id="new-brand-name" type="text" required placeholder="e.g. LEGO" class="w-full px-3 py-2 border-2 border-deepNavy rounded bg-white text-xs font-sans focus:outline-none focus:ring-1 focus:ring-brandRed text-deepNavy">
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold uppercase text-deepNavy mb-1">Website Link</label>
+              <input id="new-brand-url" type="text" required placeholder="e.g. https://www.lego.com" class="w-full px-3 py-2 border-2 border-deepNavy rounded bg-white text-xs font-sans focus:outline-none focus:ring-1 focus:ring-brandRed text-deepNavy">
+            </div>
+            <button type="submit" class="w-full py-2 bg-deepNavy text-white font-sans font-bold text-[10px] uppercase tracking-wider border-2 border-deepNavy shadow-[3px_3px_0px_#1D3557] hover:bg-brandRed transition-all">
+              Add Brand Website
+            </button>
+          </form>
+        </div>
+
         <!-- Sourcing Metrics box -->
         <div id="panel-info-border" class="border-l-4 border-l-delftBlue bg-[#FAFAF7] p-4 flex flex-col gap-3 rounded border border-neutral-200">
           <h4 class="font-sans font-extrabold text-[#1D3557] text-[10px] uppercase tracking-wider">Logistical Index Metrics</h4>
@@ -595,94 +622,72 @@
 
     <!-- 9. TECHNICAL SCRIPT BLOCK -->
     <script>
-      // Full Static Verified Sourcing Mind-Map structure containing 3-Level Hierarchy
+      // Full Static Verified Sourcing Mind-Map structure.
+      // Flow: Toyza World -> Countries -> Categories -> Brand website links.
       const NODES = [
-        // Level 0 Base Node
-        { id: 'root', label: 'TOYZA WORLD', parent: null, level: 0, type: 'root', desc: 'Central European procurement headquarters located in Amsterdam, Netherlands. Direct connections to verified global supply nodes.' },
-        
-        // Level 1 Nodes (Sourcing angles)
-        { id: 'countries', label: '🌍 Sourcing Countries', parent: 'root', level: 1, type: 'countries', desc: 'Active international manufacturing zones verified on-site by our Dutch safety inspection team.' },
-        { id: 'categories', label: '🧸 Toy Categories', parent: 'root', level: 1, type: 'categories', desc: 'Comprehensive play-concept catalogs covering all child development segments.' },
-        { id: 'brands', label: '🏷️ Strategic Brands', parent: 'root', level: 1, type: 'brands', desc: 'Strategic distributor contracts with premium tier historical makers and emerging creators.' },
-        
-        // Level 2 - Under Countries
-        { id: 'cn', label: '🇨🇳 China Co-ops', parent: 'countries', level: 2, type: 'countries', desc: 'Leading manufacturers of safe craft woods and responsive developmental consumer toys.' },
-        { id: 'de', label: '🇩🇪 Germany', parent: 'countries', level: 2, type: 'countries', desc: 'Elite ecological wood carving workshops and traditional educational play setups.' },
-        { id: 'jp', label: '🇯🇵 Japan Sourcing', parent: 'countries', level: 2, type: 'countries', desc: 'Advanced collector assemblies, high-precision puzzle blocks, and modern strategy creators.' },
-        { id: 'us', label: '🇺🇸 USA Division', parent: 'countries', level: 2, type: 'countries', desc: 'Global pop-culture character licensing models and cooperative tabletop creators.' },
-        { id: 'dk', label: '🇩🇰 Denmark Hub', parent: 'countries', level: 2, type: 'countries', desc: 'The world capital of precision interlocking creative composite construction blocks.' },
-        { id: 'br', label: '🇧🇷 Brazil Active', parent: 'countries', level: 2, type: 'countries', desc: 'Sustainably procured organic natural rubber outdoor sports utilities and playground sets.' },
+        { id: 'root', label: 'TOYZA WORLD', parent: null, level: 0, type: 'root', desc: 'Click Toyza World to open the country map. Each country contains toy categories, and each category contains editable brand website targets.' },
 
-        // Level 3 - Under China Co-ops (Sub-categories)
-        { id: 'cn_wood', label: '🌳 China Wooden Woodwares', parent: 'cn', level: 3, type: 'countries', desc: 'Specialized FSC-certified timber suppliers focusing on sturdy child-safe geometric models.' },
-        { id: 'cn_wood_legofun', label: 'LegoFun Manufacturing', parent: 'cn_wood', level: 4, type: 'countries', desc: 'Leading developer of wholesale certified timber block systems and playground assemblies.' },
-        { id: 'cn_wood_woodcraft', label: 'WoodCraft Co.', parent: 'cn_wood', level: 4, type: 'countries', desc: 'Precision makers of traditional train tracks, tactile blocks, and Montessori shapes.' },
-        { id: 'cn_elec', label: '⚡ China Electronic Play', parent: 'cn', level: 3, type: 'countries', desc: 'State-of-the-art sensory developmental play gadgets featuring codable chips and lights.' },
-        { id: 'cn_elec_techplay', label: 'TechPlay Sourcing', parent: 'cn_elec', level: 4, type: 'countries', desc: 'Leading developer of screen-free codable vehicles, smart robots, and electronic audio mats.' },
+        // Level 1 - Countries revealed from Toyza World
+        { id: 'cn', label: '🇨🇳 China', parent: 'root', level: 1, type: 'countries', desc: 'Large-scale toy production for educational, electronic, plush, and wooden toy sourcing.' },
+        { id: 'id', label: '🇮🇩 Indonesia', parent: 'root', level: 1, type: 'countries', desc: 'Strong sourcing route for wooden toys, eco-friendly craft items, and retail toy distributors.' },
+        { id: 'dk', label: '🇩🇰 Denmark', parent: 'root', level: 1, type: 'countries', desc: 'Premium construction toys, creative brick systems, and educational play brands.' },
+        { id: 'de', label: '🇩🇪 Germany', parent: 'root', level: 1, type: 'countries', desc: 'High-quality wooden, educational, and preschool toy suppliers with EU compliance.' },
+        { id: 'jp', label: '🇯🇵 Japan', parent: 'root', level: 1, type: 'countries', desc: 'Character figures, puzzles, model kits, collectible toys, and precision play products.' },
+        { id: 'us', label: '🇺🇸 USA', parent: 'root', level: 1, type: 'countries', desc: 'Global brand owners for action figures, board games, dolls, and preschool toys.' },
+        { id: 'vn', label: '🇻🇳 Vietnam', parent: 'root', level: 1, type: 'countries', desc: 'Growing supplier base for plush toys, wooden toys, and export-ready toy production.' },
 
-        // Level 3 - Under Germany (Sub-categories)
-        { id: 'de_edu', label: '🧠 German Cognitive Science', parent: 'de', level: 3, type: 'countries', desc: 'Scientific organic developmental structures shaped out of European beech wood.' },
-        { id: 'de_edu_haba', label: 'Haba Germany', parent: 'de_edu', level: 4, type: 'countries', desc: 'World leader in organic baby toys, family strategic board games, and heirloom wooden blocks.' },
-        { id: 'de_edu_selecta', label: 'Selecta Spielzeug', parent: 'de_edu', level: 4, type: 'countries', desc: 'Bavarian handcrafted wooden crib utilities, baby items, and preschool sensory materials.' },
-        { id: 'de_outdoor', label: '🌳 German Outdoor Fit', parent: 'de', level: 3, type: 'countries', desc: 'Tough wooden playground swings, coordinate logs, and safety climbing frameworks.' },
+        // Level 2 - Categories inside countries
+        { id: 'cn_edu', label: '🧠 Educational Toys', parent: 'cn', level: 2, type: 'categories', desc: 'STEM kits, learning tablets, coding toys, and classroom-focused play sets from China.' },
+        { id: 'cn_elec', label: '🤖 Electronic Toys', parent: 'cn', level: 2, type: 'categories', desc: 'Robots, interactive sound toys, RC toys, and sensor-based smart play products.' },
+        { id: 'cn_plush', label: '🧸 Plush & Soft Toys', parent: 'cn', level: 2, type: 'categories', desc: 'Soft dolls, plush characters, and high-volume textile toy production.' },
 
-        // Level 3 - Under Japan Sourcing (Sub-categories)
-        { id: 'jp_anime', label: '🌸 Anime & Figurine Gears', parent: 'jp', level: 3, type: 'countries', desc: 'Highly detailed collector kits, modular robots, and scale articulated structures.' },
-        { id: 'jp_anime_bandai', label: 'Bandai Sourcing Co.', parent: 'jp_anime', level: 4, type: 'countries', desc: 'Elite worldwide distributor of pop culture character models, mechanical kits, and trading cards.' },
-        { id: 'jp_puzzle', label: '🧩 Japan Strategy Blocks', parent: 'jp', level: 3, type: 'countries', desc: 'Intricately aligned laser-cut cedar structural puzzles and math challenge cubes.' },
+        { id: 'id_wood', label: '🌳 Wooden Toys', parent: 'id', level: 2, type: 'categories', desc: 'Wooden blocks, puzzles, Montessori-style learning boards, and handmade play sets.' },
+        { id: 'id_eco', label: '♻️ Eco Craft Toys', parent: 'id', level: 2, type: 'categories', desc: 'Natural material craft sets, sustainable packaging, and eco-friendly toy collections.' },
+        { id: 'id_retail', label: '🏬 Retail Toy Sellers', parent: 'id', level: 2, type: 'categories', desc: 'Regional toy retailers and distributors suitable for partnership research.' },
 
-        // Level 3 - Under USA Division (Sub-categories)
-        { id: 'us_action', label: '🦸 American Hero Figures', parent: 'us', level: 3, type: 'countries', desc: 'Pop-culture collectibles and highly poseable story-telling characters.' },
-        { id: 'us_action_hasbro', label: 'Hasbro USA Wholesale', parent: 'us_action', level: 4, type: 'countries', desc: 'One of the ultimate figures and tabletop distributors carrying iconic licenses.' },
-        { id: 'us_board', label: '🎲 American Boardgames', parent: 'us', level: 3, type: 'countries', desc: 'Epic multiplayer boardgames, target strategy games, and party card games.' },
+        { id: 'dk_blocks', label: '🧱 Construction Toys', parent: 'dk', level: 2, type: 'categories', desc: 'Interlocking bricks, creator systems, and architecture-inspired construction play.' },
+        { id: 'dk_edu', label: '🎓 Learning Systems', parent: 'dk', level: 2, type: 'categories', desc: 'Education-focused play products for schools, coding, and creative classrooms.' },
 
-        // Level 3 - Under Denmark Hub (Sub-categories)
-        { id: 'dk_creative', label: '🧱 Creative Brick Construction', parent: 'dk', level: 3, type: 'countries', desc: 'Pristinely molded ABS plastic building structures that foster infinite architectural designs.' },
-        { id: 'dk_creative_lego', label: 'LEGO Group Direct', parent: 'dk_creative', level: 4, type: 'countries', desc: 'The golden global standard in modular brick building blocks, creator kits, and educational series.' },
+        { id: 'de_wood', label: '🌲 Wooden Toys', parent: 'de', level: 2, type: 'categories', desc: 'Beechwood blocks, toddler toys, baby toys, and EU-compliant natural play items.' },
+        { id: 'de_puzzle', label: '🧩 Puzzles & Games', parent: 'de', level: 2, type: 'categories', desc: 'Family games, preschool puzzles, and board-game style learning products.' },
+        { id: 'de_preschool', label: '👶 Preschool Toys', parent: 'de', level: 2, type: 'categories', desc: 'Safe early-age toys focused on motor skills, sensory development, and role play.' },
 
-        // Level 3 - Under Brazil Active (Sub-categories)
-        { id: 'br_sports', label: '⚽ Brazilian Natural Rubber Play', parent: 'br', level: 3, type: 'countries', desc: 'High-bounce athletic gear, tactile sand balls, and certified Amazonian tree-sap safety ropes.' },
+        { id: 'jp_figures', label: '🤖 Figures & Models', parent: 'jp', level: 2, type: 'categories', desc: 'Anime figures, model kits, collectible characters, and articulated robot toys.' },
+        { id: 'jp_puzzle', label: '🧩 Puzzle Toys', parent: 'jp', level: 2, type: 'categories', desc: 'Logic puzzles, mechanical puzzles, precision blocks, and brain-training toys.' },
 
-        // Level 2 - Under Toy Categories
-        { id: 'cat_stem', label: '🧬 Educational & STEM', parent: 'categories', level: 2, type: 'categories', desc: 'Handheld science, mathematical calculations, and programming kits that transform learning.' },
-        { id: 'cat_stem_sc', label: 'Science Lab Kits', parent: 'cat_stem', level: 3, type: 'categories', desc: 'Child safe chemical analysis tubes, geology rock kits, and magnification systems.' },
-        { id: 'cat_stem_math', label: 'Math Action Games', parent: 'cat_stem', level: 3, type: 'categories', desc: 'Visual physical counters, wooden geometry puzzles, and interactive calculation matches.' },
-        { id: 'cat_stem_coding', label: 'Screen-Free Coding Bots', parent: 'cat_stem', level: 3, type: 'categories', desc: 'Mechanical command robots that teach step logical sequences without screens.' },
+        { id: 'us_action', label: '🦸 Action Figures', parent: 'us', level: 2, type: 'categories', desc: 'Licensed heroes, character toys, story sets, and collectible figure lines.' },
+        { id: 'us_board', label: '🎲 Board Games', parent: 'us', level: 2, type: 'categories', desc: 'Family games, party games, strategy sets, and classic tabletop products.' },
+        { id: 'us_dolls', label: '👗 Dolls & Preschool', parent: 'us', level: 2, type: 'categories', desc: 'Fashion dolls, preschool characters, role-play toys, and infant play collections.' },
 
-        { id: 'cat_creative', label: '🎨 Creative & Arts', parent: 'categories', level: 2, type: 'categories', desc: 'Premium crafting tools and molding clay kits that encourage tactile expression.' },
-        { id: 'cat_creative_draw', label: 'Drawing & Watercolor Pens', parent: 'cat_creative', level: 3, type: 'categories', desc: 'Washable natural plant-oil pencils, solid gouache blocks, and hemp canvas rolls.' },
-        { id: 'cat_creative_clay', label: 'Air-Dry Clay & Wax', parent: 'cat_creative', level: 3, type: 'categories', desc: 'Hypoallergenic reusable colored beeswax blocks and non-crumble silicone clays.' },
+        { id: 'vn_plush', label: '🧸 Plush Toys', parent: 'vn', level: 2, type: 'categories', desc: 'Export-ready stuffed toys, soft characters, and textile-based toy production.' },
+        { id: 'vn_wood', label: '🌳 Wooden Toys', parent: 'vn', level: 2, type: 'categories', desc: 'Wooden learning kits, block sets, puzzles, and small-batch natural toys.' },
 
-        { id: 'cat_outdoor', label: '🚴 Outdoor & Active', parent: 'categories', level: 2, type: 'categories', desc: 'Balance trikes, coordination balls, and fitness games built for park and backyard play.' },
-        { id: 'cat_outdoor_ride', label: 'Eco Balance Bikes', parent: 'cat_outdoor', level: 3, type: 'categories', desc: 'Lightweight marine plywood stride-bikes and steel-frame adjustable balance scooters.' },
-        { id: 'cat_outdoor_sports', label: 'Active Sports Sets', parent: 'cat_outdoor', level: 3, type: 'categories', desc: 'Collapsible soccer goals, soft arrows, and portable badminton nets.' },
+        // Level 3 - Brands with website links
+        { id: 'cn_edu_hape', label: 'Hape', parent: 'cn_edu', level: 3, type: 'brands', desc: 'Educational wooden and early learning toys with global distribution.', website: 'https://www.hape.com', brand: true },
+        { id: 'cn_edu_vtech', label: 'VTech Kids', parent: 'cn_edu', level: 3, type: 'brands', desc: 'Electronic learning toys, tablets, and preschool education devices.', website: 'https://www.vtechkids.com', brand: true },
+        { id: 'cn_elec_popmart', label: 'POP MART', parent: 'cn_elec', level: 3, type: 'brands', desc: 'Collectible designer toys, blind boxes, and character merchandise.', website: 'https://www.popmart.com', brand: true },
+        { id: 'cn_plush_aurora', label: 'Aurora World', parent: 'cn_plush', level: 3, type: 'brands', desc: 'Plush animals, character soft toys, and gift-focused plush collections.', website: 'https://auroragift.com', brand: true },
 
-        { id: 'cat_elec', label: '🤖 Electronic & Digital Machines', parent: 'categories', level: 2, type: 'categories', desc: 'Intelligent developmental machines featuring responsive voice feedback and LED matrix displays.' },
-        { id: 'cat_elec_rc', label: 'RC Smart Rovers', parent: 'cat_elec', level: 3, type: 'categories', desc: 'Terrain conquering rovers equipped with lithium rechargeable cells.' },
-        { id: 'cat_elec_robot', label: 'Interactive Sound Bots', parent: 'cat_elec', level: 3, type: 'categories', desc: 'Reactive pet engines with tactile receptors and coding matrices.' },
+        { id: 'id_wood_toyskingdom', label: 'Toys Kingdom Indonesia', parent: 'id_retail', level: 3, type: 'brands', desc: 'Indonesia-based toy retail chain and product discovery source.', website: 'https://www.toyskingdom.co.id', brand: true },
+        { id: 'id_wood_kiddo', label: 'Kiddo Indonesia', parent: 'id_wood', level: 3, type: 'brands', desc: 'Example slot for an Indonesian wooden toy brand or supplier website.', website: 'https://kiddo.id', brand: true },
+        { id: 'id_eco_plan', label: 'PlanToys', parent: 'id_eco', level: 3, type: 'brands', desc: 'Sustainable wooden toys and eco-conscious play products.', website: 'https://www.plantoys.com', brand: true },
 
-        { id: 'cat_puzzle', label: '🧩 Puzzles & Tabletop Strategy', parent: 'categories', level: 2, type: 'categories', desc: 'Mind puzzles ranging from solo visual alignments to physical cooperative strategy boards.' },
-        { id: 'cat_puzzle_jigsaw', label: 'FSC Wooden Jigsaws', parent: 'cat_puzzle', level: 3, type: 'categories', desc: 'Richly patterned high-thickness laser-cut wooden jigsaw boards.' },
-        { id: 'cat_puzzle_board', label: 'Strategic Tile Builders', parent: 'cat_puzzle', level: 3, type: 'categories', desc: 'Award-winning boardgames based on block layups and trade structures.' },
+        { id: 'dk_blocks_lego', label: 'LEGO', parent: 'dk_blocks', level: 3, type: 'brands', desc: 'Global construction brick systems, creator sets, and educational series.', website: 'https://www.lego.com', brand: true },
+        { id: 'dk_edu_legoedu', label: 'LEGO Education', parent: 'dk_edu', level: 3, type: 'brands', desc: 'School learning systems, robotics, STEM lessons, and classroom kits.', website: 'https://education.lego.com', brand: true },
 
-        { id: 'cat_dolls', label: '🧸 Dolls & Figure Sets', parent: 'categories', level: 2, type: 'categories', desc: 'Fine-motor poseable emotional-expression dolls and historic action items.' },
-        { id: 'cat_dolls_fashion', label: 'Organic Cotton Dolls', parent: 'cat_dolls', level: 3, type: 'categories', desc: 'Safe cotton fabrics, poseable limb joints, and diverse clothing kits.' },
-        { id: 'cat_dolls_action', label: 'Articulated Action Heroes', parent: 'cat_dolls', level: 3, type: 'categories', desc: 'Fantasy heroes and sci-fi series poseable figurines.' },
+        { id: 'de_wood_haba', label: 'HABA', parent: 'de_wood', level: 3, type: 'brands', desc: 'German wooden toys, baby toys, blocks, and family games.', website: 'https://www.haba-play.com', brand: true },
+        { id: 'de_preschool_playmobil', label: 'Playmobil', parent: 'de_preschool', level: 3, type: 'brands', desc: 'Role-play worlds, figures, vehicles, and preschool-friendly sets.', website: 'https://www.playmobil.com', brand: true },
+        { id: 'de_puzzle_ravensburger', label: 'Ravensburger', parent: 'de_puzzle', level: 3, type: 'brands', desc: 'Premium puzzles, family games, and educational tabletop products.', website: 'https://www.ravensburger.com', brand: true },
 
-        // Level 2 - Under Brands
-        { id: 'br_premium', label: '💎 Premium Sourcing Tier', parent: 'brands', level: 2, type: 'brands', desc: 'World-famous legacy brands providing the absolute pinnacle of educational quality and child protection.' },
-        { id: 'br_premium_lego', label: 'LEGO Group bricks', parent: 'br_premium', level: 3, type: 'brands', desc: 'Danish classic block constructors, creator structures, and robotic series.', brand: true },
-        { id: 'br_premium_playmobil', label: 'Playmobil Systems', parent: 'br_premium', level: 3, type: 'brands', desc: 'Highly detailed small plastic worlds, play dioramas, and customized vehicles.', brand: true },
-        { id: 'br_premium_haba', label: 'Haba Beechwood Toyery', parent: 'br_premium', level: 3, type: 'brands', desc: 'German family wood carving legacies, blocks, and child board games.', brand: true },
+        { id: 'jp_figures_bandai', label: 'Bandai', parent: 'jp_figures', level: 3, type: 'brands', desc: 'Model kits, character figures, anime toys, and collectible play lines.', website: 'https://www.bandai.com', brand: true },
+        { id: 'jp_puzzle_tomy', label: 'TOMY', parent: 'jp_puzzle', level: 3, type: 'brands', desc: 'Classic toys, puzzle toys, model play, and character-based products.', website: 'https://www.tomy.com', brand: true },
 
-        { id: 'br_mid', label: '⚖️ Mid-Market Standard', parent: 'brands', level: 2, type: 'brands', desc: 'Universal catalog providers that cover deep, cost-efficient bulk retail orders.' },
-        { id: 'br_mid_hasbro', label: 'Hasbro Sourcing', parent: 'br_mid', level: 3, type: 'brands', desc: 'Multi-category action figures, standard board games, & active play blasters.', brand: true },
-        { id: 'br_mid_mattel', label: 'Mattel Inc.', parent: 'br_mid', level: 3, type: 'brands', desc: 'Classic global action series, fashion doll houses, & preschool lines.', brand: true },
-        { id: 'br_mid_bandai', label: 'Bandai Co.', parent: 'br_mid', level: 3, type: 'brands', desc: 'Japanese character figures, mechanical construction kits, & electronic models.', brand: true },
+        { id: 'us_action_hasbro', label: 'Hasbro', parent: 'us_action', level: 3, type: 'brands', desc: 'Action figures, role-play brands, blasters, and major licensed toy lines.', website: 'https://shop.hasbro.com', brand: true },
+        { id: 'us_board_hasbro', label: 'Hasbro Gaming', parent: 'us_board', level: 3, type: 'brands', desc: 'Classic board games, party games, and family tabletop products.', website: 'https://shop.hasbro.com/en-us/hasbro-gaming', brand: true },
+        { id: 'us_dolls_mattel', label: 'Mattel', parent: 'us_dolls', level: 3, type: 'brands', desc: 'Fashion dolls, preschool brands, vehicles, and global character toys.', website: 'https://www.mattel.com', brand: true },
 
-        { id: 'br_emerging', label: '⭐ Emerging Creators', parent: 'brands', level: 2, type: 'brands', desc: 'Aesthetic-driven artisanal shops and green design co-ops breaking onto the market.' },
-        { id: 'br_emerging_janod', label: 'Janod French Wood', parent: 'br_emerging', level: 3, type: 'brands', desc: 'Classic French toy makers producing design-forward wooden toys and puzzles.', brand: true },
-        { id: 'br_emerging_djeco', label: 'Djeco Art & Crafts', parent: 'br_emerging', level: 3, type: 'brands', desc: 'Striking cardboard puzzles, preschool wood, and luxury craft cards.', brand: true }
+        { id: 'vn_plush_ty', label: 'Ty', parent: 'vn_plush', level: 3, type: 'brands', desc: 'Plush collectibles and soft toy product lines.', website: 'https://shop.ty.com', brand: true },
+        { id: 'vn_wood_janod', label: 'Janod', parent: 'vn_wood', level: 3, type: 'brands', desc: 'Wooden toys, puzzles, and design-led early learning collections.', website: 'https://www.janod.com', brand: true }
       ];
 
       // Panning and zoom state variables
@@ -701,17 +706,65 @@
       let startY = 0;
       let isDragMovement = false;
       let hoveredNodeId = null;
+      let activePanelNodeId = null;
 
-      // Initialize defaults
-      NODES.forEach(n => {
-        // Initially expand level 0 and level 1 structure
-        n.expanded = (n.level < 1);
+      function initializeNodeState(n) {
+        // Start collapsed so the central Toyza World node reveals countries on click.
+        n.expanded = false;
         n.currentX = 0;
         n.currentY = 0;
         n.currentScale = 0;
         n.currentOpacity = 0;
         n.matched = false;
         n.hasMatchedDescendant = false;
+      }
+
+      function sanitizePlainText(value) {
+        return value.trim().replace(/[<>]/g, '').slice(0, 80);
+      }
+
+      function normalizeWebsiteUrl(value) {
+        const trimmed = value.trim();
+        const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+        return new URL(withProtocol).href;
+      }
+
+      function getCustomBrandNodes() {
+        try {
+          return JSON.parse(localStorage.getItem('toyzaCustomBrands') || '[]');
+        } catch {
+          return [];
+        }
+      }
+
+      function saveCustomBrandNodes() {
+        const customNodes = NODES.filter(n => n.customBrand).map(n => ({
+          id: n.id,
+          label: n.label,
+          parent: n.parent,
+          level: n.level,
+          type: n.type,
+          desc: n.desc,
+          website: n.website,
+          brand: true,
+          customBrand: true
+        }));
+        try {
+          localStorage.setItem('toyzaCustomBrands', JSON.stringify(customNodes));
+        } catch {
+          showToast('Brand added for this session, but browser storage is unavailable.');
+        }
+      }
+
+      getCustomBrandNodes().forEach(node => {
+        if (node && node.id && node.parent && node.label && node.website && !NODES.some(n => n.id === node.id)) {
+          NODES.push(node);
+        }
+      });
+
+      // Initialize defaults
+      NODES.forEach(n => {
+        initializeNodeState(n);
       });
 
       // Layout assignment math
@@ -722,32 +775,26 @@
         root.targetY = 0;
         root.angle = 0;
 
-        // 2. Level 1 Branches (balanced around 360 deg)
+        // 2. Level 1 country branches orbit around Toyza World
         const l1Nodes = NODES.filter(n => n.parent === 'root');
-        const l1Angles = {
-          'countries': -145 * Math.PI / 180, // Top Left
-          'categories': 0 * Math.PI / 180,   // Directly Right
-          'brands': 110 * Math.PI / 180       // Bottom Left
-        };
-        const R1 = 260; // radius from Root
-        l1Nodes.forEach(node => {
-          node.angle = l1Angles[node.id] || 0;
+        const R1 = 310; // radius from Root
+        const startAngle = -155 * Math.PI / 180;
+        const spreadAngle = 310 * Math.PI / 180;
+        const l1Step = l1Nodes.length > 1 ? spreadAngle / (l1Nodes.length - 1) : 0;
+        l1Nodes.forEach((node, idx) => {
+          node.angle = startAngle + (idx * l1Step);
           node.targetX = R1 * Math.cos(node.angle);
           node.targetY = R1 * Math.sin(node.angle);
         });
 
-        // 3. Level 2 Nodes (Spreads centered on their parent angle)
-        const R2 = 230; // radius from L1
+        // 3. Level 2 category nodes spread from each country
+        const R2 = 225; // radius from country
         l1Nodes.forEach(parent => {
           const children = NODES.filter(n => n.parent === parent.id);
           const count = children.length;
           if (count === 0) return;
 
-          let spread = 105 * Math.PI / 180;
-          if (parent.id === 'countries') spread = 120 * Math.PI / 180;
-          if (parent.id === 'categories') spread = 135 * Math.PI / 180;
-          if (parent.id === 'brands') spread = 60 * Math.PI / 180;
-
+          const spread = Math.min(115, 45 + count * 24) * Math.PI / 180;
           const start = parent.angle - spread / 2;
           const step = count > 1 ? spread / (count - 1) : 0;
 
@@ -758,8 +805,8 @@
           });
         });
 
-        // 4. Level 3 Nodes (centered on parent path angle from origin)
-        const R3 = 180; // radius from L2
+        // 4. Level 3 brand nodes sit under the selected category
+        const R3 = 160; // radius from category
         const l2Nodes = NODES.filter(n => n.level === 2);
         l2Nodes.forEach(parent => {
           const children = NODES.filter(n => n.parent === parent.id);
@@ -767,7 +814,7 @@
           if (count === 0) return;
 
           const parentAngle = Math.atan2(parent.targetY, parent.targetX);
-          const spread = 65 * Math.PI / 180;
+          const spread = Math.min(70, 25 + count * 22) * Math.PI / 180;
           const start = parentAngle - spread / 2;
           const step = count > 1 ? spread / (count - 1) : 0;
 
@@ -935,6 +982,7 @@
       function openSidePanel(node) {
         const panel = document.getElementById('side-panel');
         if (!panel) return;
+        activePanelNodeId = node.id;
 
         const badge = document.getElementById('panel-badge');
         const title = document.getElementById('panel-title');
@@ -944,15 +992,19 @@
         const moq = document.getElementById('panel-moq');
         const safety = document.getElementById('panel-safety');
         const logoBox = document.getElementById('panel-logo-box');
+        const websiteWrap = document.getElementById('panel-website-wrap');
+        const websiteLink = document.getElementById('panel-website');
+        const websiteLabel = document.getElementById('panel-website-label');
+        const brandEditor = document.getElementById('panel-brand-editor');
 
         let badgeColor = 'bg-delftBlue';
-        let badgeText = 'WORLD REGION';
+        let badgeText = 'COUNTRY';
         if (node.type === 'categories') {
           badgeColor = 'bg-toyOrange';
-          badgeText = 'TOY SEGMENT';
+          badgeText = 'TOY CATEGORY';
         } else if (node.type === 'brands') {
           badgeColor = 'bg-brandRed';
-          badgeText = 'BRAND DIRECT';
+          badgeText = 'BRAND WEBSITE';
         }
 
         badge.className = `inline-block px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white border border-deepNavy shadow-[1.5px_1.5px_0px_#1D3557] mb-3 ${badgeColor}`;
@@ -961,6 +1013,24 @@
         title.innerText = node.label;
         breadcrumbs.innerText = getPathBreadcrumbs(node);
         desc.innerText = node.desc || "Verified Toyza World distribution partnership. Fully compliant on-site logistics audits, custom packaging compatibility, and prompt shipping transfers from our Amsterdam warehouse.";
+
+        if (node.website) {
+          websiteLink.href = node.website;
+          websiteLabel.innerText = node.website.replace(/^https?:\/\//, '');
+          websiteWrap.classList.remove('hidden');
+        } else {
+          websiteLink.href = '#';
+          websiteLabel.innerText = 'Open website';
+          websiteWrap.classList.add('hidden');
+        }
+
+        if (node.type === 'categories') {
+          brandEditor.classList.remove('hidden');
+          document.getElementById('new-brand-name').value = '';
+          document.getElementById('new-brand-url').value = '';
+        } else {
+          brandEditor.classList.add('hidden');
+        }
 
         let lt = "4-6 Weeks";
         let minOrder = "€1,500";
@@ -971,7 +1041,7 @@
           else if (node.id.includes('de') || node.id.includes('dk')) { lt = "2 Weeks"; minOrder = "€1,000"; cert = "CE, EN71 standard, FSC Beechwood"; }
           else if (node.id.includes('jp')) { lt = "5 Weeks"; minOrder = "€3,000"; cert = "CE standard, Japan ST safety, EN71"; }
           else if (node.id.includes('us')) { lt = "4 Weeks"; minOrder = "€2,500"; cert = "CE, ASTM F963, Consumer Product CPC"; }
-          else if (node.id.includes('br')) { lt = "6 Weeks"; minOrder = "€4,500"; cert = "CE, INMETRO compliance certification"; }
+          else if (node.id.includes('id') || node.id.includes('vn')) { lt = "6 Weeks"; minOrder = "€3,500"; cert = "CE, EN71, export documentation check"; }
         } else if (node.type === 'categories') {
           lt = "3-5 Weeks";
           minOrder = "€2,000";
@@ -993,7 +1063,7 @@
 
         // Get single character or emoji for logo box
         let char = node.label.charAt(0);
-        if (node.label.includes('🌍') || node.label.includes('🧸') || node.label.includes('🏷️') || node.label.includes('🇨🇳') || node.label.includes('🇩🇪') || node.label.includes('🇯🇵') || node.label.includes('🇺🇸') || node.label.includes('🇩🇰') || node.label.includes('🇧🇷')) {
+        if (node.label.includes('🌍') || node.label.includes('🧸') || node.label.includes('🏷️') || node.label.includes('🇨🇳') || node.label.includes('🇮🇩') || node.label.includes('🇩🇪') || node.label.includes('🇯🇵') || node.label.includes('🇺🇸') || node.label.includes('🇩🇰') || node.label.includes('🇻🇳')) {
           char = node.label.substring(0, 2);
         }
 
@@ -1029,6 +1099,64 @@
         document.getElementById('panel-form-success').classList.remove('hidden');
 
         showToast(`Catalog Request for "${title}" sent! Our trade desk will contact ${email}.`);
+      }
+
+      function handleBrandAdd(e) {
+        e.preventDefault();
+
+        const category = NODES.find(n => n.id === activePanelNodeId);
+        if (!category || category.type !== 'categories') {
+          showToast('Please open a toy category before adding a brand.');
+          return;
+        }
+
+        const nameInput = document.getElementById('new-brand-name');
+        const urlInput = document.getElementById('new-brand-url');
+        const brandName = sanitizePlainText(nameInput.value);
+
+        let website;
+        try {
+          website = normalizeWebsiteUrl(urlInput.value);
+        } catch {
+          showToast('Please enter a valid website link.');
+          return;
+        }
+
+        if (!brandName) {
+          showToast('Please enter a brand name.');
+          return;
+        }
+
+        const newNode = {
+          id: `custom_${category.id}_${Date.now()}`,
+          label: brandName,
+          parent: category.id,
+          level: category.level + 1,
+          type: 'brands',
+          desc: `Custom brand website target added under ${category.label}.`,
+          website,
+          brand: true,
+          customBrand: true
+        };
+
+        initializeNodeState(newNode);
+        NODES.push(newNode);
+        category.expanded = true;
+
+        let parentId = category.parent;
+        while (parentId) {
+          const parentNode = NODES.find(n => n.id === parentId);
+          if (!parentNode) break;
+          parentNode.expanded = true;
+          parentId = parentNode.parent;
+        }
+
+        saveCustomBrandNodes();
+        assignPositions();
+        createDOMNodes();
+        buildMobileAccordion();
+        openSidePanel(newNode);
+        showToast(`${brandName} added with website link.`);
       }
 
       // Toast feedback helper
@@ -1075,7 +1203,8 @@
         NODES.forEach(n => {
           const matchLabel = n.label.toLowerCase().includes(val);
           const matchDesc = n.desc && n.desc.toLowerCase().includes(val);
-          if (matchLabel || matchDesc) {
+          const matchWebsite = n.website && n.website.toLowerCase().includes(val);
+          if (matchLabel || matchDesc || matchWebsite) {
             n.matched = true;
             matchCount++;
 
@@ -1200,9 +1329,9 @@
           targetPanX = container.clientWidth / 2;
           targetPanY = container.clientHeight / 3;
           
-          // Collapse all and reset default
+          // Collapse all and wait for the user to click Toyza World again.
           NODES.forEach(n => {
-            n.expanded = (n.level < 1);
+            n.expanded = false;
           });
         } else {
           targetZoom = Math.min(Math.max(targetZoom * factor, 0.5), 2.5);
@@ -1327,7 +1456,7 @@
                           <div class="flex justify-between items-center cursor-pointer" onclick="${hasL4 ? `toggleAccordion('m-acc-${l3.id}')` : `openMobileDetail('${l3.id}')`}">
                             <span class="font-sans text-[11px] font-bold text-deepNavy">${l3.label}</span>
                             <div class="flex items-center gap-1.5">
-                              <span class="text-[8px] font-bold text-white bg-slate-500 px-1.5 py-0.5 rounded" onclick="event.stopPropagation(); openMobileDetail('${l3.id}')">Specs</span>
+                              <span class="text-[8px] font-bold text-white bg-slate-500 px-1.5 py-0.5 rounded" onclick="event.stopPropagation(); openMobileDetail('${l3.id}')">${l3.website ? 'Link' : 'Specs'}</span>
                               ${hasL4 ? `
                                 <svg id="arrow-m-acc-${l3.id}" class="w-3 h-3 transform text-deepNavy/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                               ` : ''}
@@ -1395,7 +1524,7 @@
 
         // Traverse mobile elements, auto expand open all nodes that match
         NODES.forEach(n => {
-          if (n.label.toLowerCase().includes(val) || (n.desc && n.desc.toLowerCase().includes(val))) {
+          if (n.label.toLowerCase().includes(val) || (n.desc && n.desc.toLowerCase().includes(val)) || (n.website && n.website.toLowerCase().includes(val))) {
             let parentId = n.parent;
             while (parentId) {
               const pContent = document.getElementById(`content-m-acc-${parentId}`);
