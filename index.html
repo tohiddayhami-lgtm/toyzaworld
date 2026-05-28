@@ -51,6 +51,7 @@
       const firebaseAuth = getAuth(firebaseApp);
       const firebaseDb = getFirestore(firebaseApp);
       const toyMapConfigRef = doc(firebaseDb, 'siteConfig', 'toyMap');
+      const siteInfoConfigRef = doc(firebaseDb, 'siteConfig', 'siteInfo');
 
       isSupported()
         .then((supported) => {
@@ -124,6 +125,16 @@
           return Array.isArray(data.nodes) ? data.nodes : null;
         } catch (error) {
           console.warn('Toyza map config could not be loaded from Firestore.', error);
+          return null;
+        }
+      };
+
+      window.loadToyzaSiteInfo = async function () {
+        try {
+          const snapshot = await getDoc(siteInfoConfigRef);
+          return snapshot.exists() ? snapshot.data() : null;
+        } catch (error) {
+          console.warn('Toyza site info could not be loaded from Firestore.', error);
           return null;
         }
       };
@@ -278,10 +289,10 @@
 
             <!-- Main Heading -->
             <h1 class="font-display font-black text-4xl sm:text-5xl lg:text-7xl text-deepNavy tracking-tight leading-none mt-2">
-              The World's Toys,<br>Delivered to Europe
+              <span data-site-key="heroLine1">The World's Toys,</span><br><span data-site-key="heroLine2">Delivered to Europe</span>
             </h1>
             
-            <p class="font-sans text-deepNavy/90 font-medium text-base sm:text-lg lg:text-xl max-w-2xl mt-4 leading-relaxed">
+            <p data-site-key="heroText" class="font-sans text-deepNavy/90 font-medium text-base sm:text-lg lg:text-xl max-w-2xl mt-4 leading-relaxed">
               Toyza World connects European retailers with the best toy manufacturers across 40+ countries. Explore our global network through an interactive catalog.
             </p>
 
@@ -544,9 +555,9 @@
                 VERIFIED B.V. CORPORATION
               </div>
               <h3 class="font-display font-black text-2xl sm:text-3xl tracking-tight leading-tight">
-                Start Sourcing Smarter
+                <span data-site-key="contactTitle">Start Sourcing Smarter</span>
               </h3>
-              <p class="font-sans text-white/80 text-sm mt-1 leading-relaxed">
+              <p data-site-key="contactText" class="font-sans text-white/80 text-sm mt-1 leading-relaxed">
                 Reach out to our Amsterdam headquarters for full catalog access, bulk trade pricing estimates, security compliance audits, and custom import requests.
               </p>
               
@@ -555,15 +566,22 @@
                 <div class="flex items-start gap-3">
                   <span class="text-lg">📍</span>
                   <div class="font-sans text-xs">
-                    <p class="font-bold">Toyza World B.V.</p>
-                    <p class="opacity-80">Prinsengracht 450, 1016 HL Amsterdam, Netherlands</p>
+                    <p data-site-key="companyName" class="font-bold">Toyza World B.V.</p>
+                    <p data-site-key="address" class="opacity-80">Prinsengracht 450, 1016 HL Amsterdam, Netherlands</p>
                   </div>
                 </div>
                 <div class="flex items-start gap-3">
                   <span class="text-lg">✉️</span>
                   <div class="font-sans text-xs">
                     <p class="font-bold">Partnerships & Sourcing</p>
-                    <p class="opacity-80">procure@toyzaworld.nl</p>
+                    <p data-site-key="email" class="opacity-80">procure@toyzaworld.nl</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3">
+                  <span class="text-lg">☎</span>
+                  <div class="font-sans text-xs">
+                    <p class="font-bold">Trade Phone</p>
+                    <p data-site-key="phone" class="opacity-80">+31 20 000 0000</p>
                   </div>
                 </div>
               </div>
@@ -571,8 +589,8 @@
 
             <!-- Trade Disclaimer -->
             <div class="mt-12 pt-6 border-t border-white/10 text-[10px] sm:text-xs font-mono text-white/50">
-              Chamber of Commerce (KvK): NL8641920B01<br>
-              Authorized European Sourcing Hub.
+              Chamber of Commerce (KvK): <span data-site-key="kvk">NL8641920B01</span><br>
+              <span data-site-key="legalNote">Authorized European Sourcing Hub.</span>
             </div>
           </div>
 
@@ -645,8 +663,8 @@
         </div>
         
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 font-mono text-[10px] text-white/50 bg-[#1D3557]/40 lg:bg-transparent -mx-4 sm:mx-0 p-4 sm:p-0 rounded">
-          <p>© 2026 Toyza World B.V. — Amsterdam, Netherlands. All rights reserved.</p>
-          <p>Curated Global Sourcing. <span class="text-brandRed">Play Without Borders.</span></p>
+          <p data-site-key="footerCopyright">© 2026 Toyza World B.V. — Amsterdam, Netherlands. All rights reserved.</p>
+          <p>Curated Global Sourcing. <span data-site-key="footerTagline" class="text-brandRed">Play Without Borders.</span></p>
         </div>
       </div>
     </footer>
@@ -889,11 +907,22 @@
         NODES.forEach(n => initializeNodeState(n));
       }
 
+      function mergeMapNodes(defaultNodes, savedNodes) {
+        const savedById = new Map((savedNodes || []).map(node => [node.id, node]));
+        const merged = defaultNodes.map(defaultNode => ({
+          ...defaultNode,
+          ...(savedById.get(defaultNode.id) || {})
+        }));
+        const defaultIds = new Set(defaultNodes.map(node => node.id));
+        const customSaved = (savedNodes || []).filter(node => !defaultIds.has(node.id));
+        return [...merged, ...customSaved];
+      }
+
       async function loadSavedToyzaMapConfig() {
         if (!window.loadToyzaMapConfig) return;
         const savedNodes = await window.loadToyzaMapConfig();
         if (savedNodes) {
-          replaceMapNodes(savedNodes);
+          replaceMapNodes(mergeMapNodes(NODES, savedNodes));
         }
       }
 
@@ -918,6 +947,17 @@
           brands: visibleNodes.filter(n => n.type === 'brands' && n.brand).length
         };
       };
+
+      function applySiteInfo(siteInfo) {
+        if (!siteInfo) return;
+
+        Object.entries(siteInfo).forEach(([key, value]) => {
+          const target = document.querySelector(`[data-site-key="${key}"]`);
+          if (target && typeof value === 'string') {
+            target.innerText = value;
+          }
+        });
+      }
 
       // Layout assignment math
       function assignPositions() {
@@ -1967,6 +2007,9 @@
 
       // Initial Bootstrap Sourcing Dashboard
       window.addEventListener('load', async () => {
+        if (window.loadToyzaSiteInfo) {
+          applySiteInfo(await window.loadToyzaSiteInfo());
+        }
         await loadSavedToyzaMapConfig();
         assignPositions();
         createDOMNodes();

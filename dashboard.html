@@ -75,6 +75,24 @@
 
             <div id="status" class="hidden mb-4 text-xs font-bold p-3 rounded"></div>
 
+            <form id="site-info-form" class="grid grid-cols-1 sm:grid-cols-2 gap-3 border-2 border-slateLines rounded p-4 mb-4">
+              <h2 class="sm:col-span-2 font-bold text-xs uppercase tracking-wider">Website Info</h2>
+              <input id="site-heroLine1" type="text" placeholder="Hero title line 1" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <input id="site-heroLine2" type="text" placeholder="Hero title line 2" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <textarea id="site-heroText" rows="2" placeholder="Hero description" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm"></textarea>
+              <input id="site-companyName" type="text" placeholder="Company name" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <input id="site-email" type="email" placeholder="Email" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <input id="site-phone" type="text" placeholder="Phone number" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <input id="site-kvk" type="text" placeholder="KvK / company number" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <input id="site-address" type="text" placeholder="Address" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <input id="site-contactTitle" type="text" placeholder="Contact title" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <textarea id="site-contactText" rows="2" placeholder="Contact text" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm"></textarea>
+              <input id="site-legalNote" type="text" placeholder="Legal note" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <input id="site-footerCopyright" type="text" placeholder="Footer copyright" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <input id="site-footerTagline" type="text" placeholder="Footer tagline" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <button type="submit" class="sm:col-span-2 px-4 py-2 bg-deepNavy text-white rounded text-xs font-bold uppercase hover:bg-brandRed transition-all">Save Website Info</button>
+            </form>
+
             <form id="edit-form" class="grid grid-cols-1 sm:grid-cols-2 gap-3 border-2 border-slateLines rounded p-4 mb-4">
               <h2 class="sm:col-span-2 font-bold text-xs uppercase tracking-wider">Edit Existing Item</h2>
               <select id="node-select" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm"></select>
@@ -129,9 +147,41 @@
       const auth = getAuth(app);
       const db = getFirestore(app);
       const mapRef = doc(db, 'siteConfig', 'toyMap');
+      const siteInfoRef = doc(db, 'siteConfig', 'siteInfo');
       let nodes = [];
+      let siteInfo = {};
 
       const $ = (id) => document.getElementById(id);
+      const siteInfoKeys = [
+        'heroLine1',
+        'heroLine2',
+        'heroText',
+        'companyName',
+        'address',
+        'email',
+        'phone',
+        'kvk',
+        'contactTitle',
+        'contactText',
+        'legalNote',
+        'footerCopyright',
+        'footerTagline'
+      ];
+      const defaultSiteInfo = {
+        heroLine1: "The World's Toys,",
+        heroLine2: 'Delivered to Europe',
+        heroText: 'Toyza World connects European retailers with the best toy manufacturers across 40+ countries. Explore our global network through an interactive catalog.',
+        companyName: 'Toyza World B.V.',
+        address: 'Prinsengracht 450, 1016 HL Amsterdam, Netherlands',
+        email: 'procure@toyzaworld.nl',
+        phone: '+31 20 000 0000',
+        kvk: 'NL8641920B01',
+        contactTitle: 'Start Sourcing Smarter',
+        contactText: 'Reach out to our Amsterdam headquarters for full catalog access, bulk trade pricing estimates, security compliance audits, and custom import requests.',
+        legalNote: 'Authorized European Sourcing Hub.',
+        footerCopyright: '© 2026 Toyza World B.V. — Amsterdam, Netherlands. All rights reserved.',
+        footerTagline: 'Play Without Borders.'
+      };
 
       function showStatus(message, isError = false) {
         const box = $('status');
@@ -197,15 +247,35 @@
 
       async function loadDefaultNodesFromIndex() {
         const html = await fetch('index.html').then((response) => response.text());
-        const match = html.match(/const NODES = (\[[\s\S]*?\n\s*\];)/);
+        const match = html.match(/const NODES = (\[[\s\S]*?\n\s*\];)/) || html.match(/const NODES = (\[[\s\S]*?\]);/);
         if (!match) return [];
         return new Function(`return ${match[1].replace(/;\s*$/, '')}`)();
+      }
+
+      function mergeNodes(defaultNodes, savedNodes) {
+        const savedById = new Map((savedNodes || []).map((node) => [node.id, node]));
+        const merged = defaultNodes.map((defaultNode) => ({
+          ...defaultNode,
+          ...(savedById.get(defaultNode.id) || {})
+        }));
+        const defaultIds = new Set(defaultNodes.map((node) => node.id));
+        const customSaved = (savedNodes || []).filter((node) => !defaultIds.has(node.id));
+        return [...merged, ...customSaved];
       }
 
       async function loadNodes() {
         const defaults = await loadDefaultNodesFromIndex();
         const snapshot = await getDoc(mapRef);
-        nodes = snapshot.exists() && Array.isArray(snapshot.data().nodes) ? snapshot.data().nodes : defaults;
+        const saved = snapshot.exists() && Array.isArray(snapshot.data().nodes) ? snapshot.data().nodes : [];
+        nodes = mergeNodes(defaults, saved);
+      }
+
+      async function loadSiteInfo() {
+        const snapshot = await getDoc(siteInfoRef);
+        siteInfo = {
+          ...defaultSiteInfo,
+          ...(snapshot.exists() ? snapshot.data() : {})
+        };
       }
 
       async function saveNodes(message) {
@@ -216,6 +286,20 @@
         }, { merge: true });
         render();
         showStatus(message);
+      }
+
+      async function saveSiteInfo() {
+        siteInfoKeys.forEach((key) => {
+          siteInfo[key] = $(`site-${key}`).value.trim();
+        });
+
+        await setDoc(siteInfoRef, {
+          ...siteInfo,
+          updatedAt: serverTimestamp(),
+          updatedBy: auth.currentUser.email || auth.currentUser.uid
+        }, { merge: true });
+
+        showStatus('Website info saved.');
       }
 
       function fillParentSelect(select, type, currentParent = '') {
@@ -250,6 +334,12 @@
         fillParentSelect($('new-parent'), $('new-type').value);
       }
 
+      function renderSiteInfo() {
+        siteInfoKeys.forEach((key) => {
+          $(`site-${key}`).value = siteInfo[key] || '';
+        });
+      }
+
       $('login-form').addEventListener('submit', async (event) => {
         event.preventDefault();
         $('login-error').classList.add('hidden');
@@ -265,6 +355,15 @@
       $('signout').addEventListener('click', () => signOut(auth));
       $('node-select').addEventListener('change', syncSelectedNode);
       $('new-type').addEventListener('change', () => fillParentSelect($('new-parent'), $('new-type').value));
+
+      $('site-info-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        try {
+          await saveSiteInfo();
+        } catch (error) {
+          showStatus(error.message || 'Could not save website info.', true);
+        }
+      });
 
       $('edit-form').addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -334,6 +433,8 @@
         $('login-view').classList.add('hidden');
         $('dashboard-view').classList.remove('hidden');
         await loadNodes();
+        await loadSiteInfo();
+        renderSiteInfo();
         render();
       });
     </script>
