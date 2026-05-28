@@ -1,0 +1,6 @@
+{
+  "name": "Toyza World",
+  "description": "A Netherlands-based curated toy sourcing & distribution network with an interactive dynamic mind map of global manufacturers, categories, and brands.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
