@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Toyza World | Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Fraunces:wght@700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brandRed: '#E63946',
+              delftBlue: '#457B9D',
+              toyOrange: '#F4A261',
+              deepNavy: '#1D3557',
+              slateLines: '#CBD5E0',
+              warmOffwhite: '#FAFAF7',
+            },
+            fontFamily: {
+              display: ['Fraunces', 'serif'],
+              sans: ['DM Sans', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body class="min-h-screen bg-warmOffwhite text-deepNavy font-sans">
+    <main class="min-h-screen flex items-center justify-center px-4 py-10">
+      <section class="w-full max-w-3xl bg-white border-2 border-deepNavy rounded-lg shadow-[7px_7px_0px_#1D3557] overflow-hidden">
+        <div class="flex items-center justify-between gap-4 bg-deepNavy text-white px-5 py-4">
+          <div>
+            <a href="index.html" class="font-mono text-[10px] uppercase tracking-widest text-white/60 hover:text-toyOrange">Back to site</a>
+            <h1 class="font-display font-black text-2xl leading-tight mt-1">Dashboard</h1>
+          </div>
+          <span id="auth-status" class="font-mono text-[10px] uppercase tracking-widest text-toyOrange">Locked</span>
+        </div>
+
+        <div class="p-5 sm:p-6">
+          <div id="login-view">
+            <form id="login-form" class="grid grid-cols-1 gap-3">
+              <input id="email" required type="email" placeholder="Admin email" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <input id="password" required type="password" placeholder="Password" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <button type="submit" class="px-4 py-2 bg-brandRed text-white border-2 border-deepNavy font-bold text-xs uppercase tracking-widest rounded shadow-[3px_3px_0px_#1D3557] hover:bg-deepNavy transition-all">
+                Login
+              </button>
+              <p id="login-error" class="hidden text-xs font-bold text-brandRed"></p>
+            </form>
+          </div>
+
+          <div id="dashboard-view" class="hidden">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+              <p class="font-mono text-[10px] text-deepNavy/60">Signed in as <span id="admin-email" class="text-brandRed"></span></p>
+              <button id="signout" type="button" class="px-3 py-1.5 border-2 border-deepNavy rounded text-xs font-bold hover:bg-deepNavy hover:text-white transition-all">Sign out</button>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 mb-5">
+              <div class="border-2 border-deepNavy bg-warmOffwhite p-3 rounded">
+                <span id="country-count" class="font-display font-black text-3xl text-delftBlue">0</span>
+                <p class="font-bold text-[10px] uppercase tracking-wider">Countries</p>
+              </div>
+              <div class="border-2 border-deepNavy bg-warmOffwhite p-3 rounded">
+                <span id="category-count" class="font-display font-black text-3xl text-toyOrange">0</span>
+                <p class="font-bold text-[10px] uppercase tracking-wider">Categories</p>
+              </div>
+              <div class="border-2 border-deepNavy bg-warmOffwhite p-3 rounded">
+                <span id="brand-count" class="font-display font-black text-3xl text-brandRed">0</span>
+                <p class="font-bold text-[10px] uppercase tracking-wider">Links</p>
+              </div>
+            </div>
+
+            <div id="status" class="hidden mb-4 text-xs font-bold p-3 rounded"></div>
+
+            <form id="edit-form" class="grid grid-cols-1 sm:grid-cols-2 gap-3 border-2 border-slateLines rounded p-4 mb-4">
+              <h2 class="sm:col-span-2 font-bold text-xs uppercase tracking-wider">Edit Existing Item</h2>
+              <select id="node-select" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm"></select>
+              <input id="node-label" required type="text" placeholder="Name" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <select id="node-parent" class="px-3 py-2 border-2 border-deepNavy rounded text-sm"></select>
+              <textarea id="node-desc" rows="2" placeholder="Description" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm"></textarea>
+              <input id="node-website" type="text" placeholder="Brand website link" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <label class="sm:col-span-2 flex items-center gap-2 text-xs font-bold">
+                <input id="node-hidden" type="checkbox" class="accent-brandRed">
+                Hide from customers
+              </label>
+              <div class="sm:col-span-2 flex justify-between gap-3">
+                <button id="delete-node" type="button" class="px-4 py-2 border-2 border-brandRed text-brandRed rounded text-xs font-bold uppercase hover:bg-brandRed hover:text-white transition-all">Delete</button>
+                <button type="submit" class="px-4 py-2 bg-deepNavy text-white rounded text-xs font-bold uppercase hover:bg-brandRed transition-all">Save</button>
+              </div>
+            </form>
+
+            <form id="add-form" class="grid grid-cols-1 sm:grid-cols-2 gap-3 border-2 border-slateLines rounded p-4">
+              <h2 class="sm:col-span-2 font-bold text-xs uppercase tracking-wider">Add New Item</h2>
+              <select id="new-type" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+                <option value="countries">Country</option>
+                <option value="categories">Category</option>
+                <option value="brands">Brand Link</option>
+              </select>
+              <select id="new-parent" class="px-3 py-2 border-2 border-deepNavy rounded text-sm"></select>
+              <input id="new-label" required type="text" placeholder="Name" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <input id="new-website" type="text" placeholder="Website for brand" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              <textarea id="new-desc" rows="2" placeholder="Description" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm"></textarea>
+              <button type="submit" class="sm:col-span-2 px-4 py-2 bg-brandRed text-white rounded text-xs font-bold uppercase hover:bg-deepNavy transition-all">Add Item</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+      import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+      import { getFirestore, doc, getDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyA7_yhgxYtUb_2YroHjzF_fO_CIsWCOxg8",
+        authDomain: "toyzaworld.firebaseapp.com",
+        projectId: "toyzaworld",
+        storageBucket: "toyzaworld.firebasestorage.app",
+        messagingSenderId: "604394849927",
+        appId: "1:604394849927:web:dbf979ca814ff596669a22",
+        measurementId: "G-LS0KW2MR1P"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      const mapRef = doc(db, 'siteConfig', 'toyMap');
+      let nodes = [];
+
+      const $ = (id) => document.getElementById(id);
+
+      function showStatus(message, isError = false) {
+        const box = $('status');
+        box.textContent = message;
+        box.className = `mb-4 text-xs font-bold p-3 rounded ${isError ? 'text-brandRed bg-red-50 border-2 border-brandRed' : 'text-green-700 bg-green-50 border-2 border-green-700'}`;
+        box.classList.remove('hidden');
+      }
+
+      function clean(value) {
+        return value.trim().replace(/[<>]/g, '').slice(0, 80);
+      }
+
+      function normalizeUrl(value) {
+        const trimmed = value.trim();
+        const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+        return new URL(withProtocol).href;
+      }
+
+      function isVisible(node) {
+        if (!node || node.hidden || node.deleted) return false;
+        let parentId = node.parent;
+        while (parentId) {
+          const parent = nodes.find((item) => item.id === parentId);
+          if (!parent || parent.hidden || parent.deleted) return false;
+          parentId = parent.parent;
+        }
+        return true;
+      }
+
+      function parentOptions(type) {
+        if (type === 'countries') return nodes.filter((node) => node.id === 'root');
+        if (type === 'categories') return nodes.filter((node) => node.type === 'countries' && !node.deleted);
+        if (type === 'brands') return nodes.filter((node) => node.type === 'categories' && !node.deleted);
+        return [];
+      }
+
+      function updateLevel(node) {
+        const parent = nodes.find((item) => item.id === node.parent);
+        node.level = parent ? parent.level + 1 : 1;
+      }
+
+      function markDeleted(nodeId) {
+        const node = nodes.find((item) => item.id === nodeId);
+        if (!node) return;
+        node.deleted = true;
+        nodes.filter((item) => item.parent === nodeId).forEach((child) => markDeleted(child.id));
+      }
+
+      function serializeNodes() {
+        return nodes.map((node) => ({
+          id: node.id,
+          label: node.label,
+          parent: node.parent,
+          level: node.level,
+          type: node.type,
+          desc: node.desc || '',
+          website: node.website || '',
+          brand: Boolean(node.brand),
+          hidden: Boolean(node.hidden),
+          deleted: Boolean(node.deleted)
+        }));
+      }
+
+      async function loadDefaultNodesFromIndex() {
+        const html = await fetch('index.html').then((response) => response.text());
+        const match = html.match(/const NODES = (\[[\s\S]*?\n\s*\];)/);
+        if (!match) return [];
+        return new Function(`return ${match[1].replace(/;\s*$/, '')}`)();
+      }
+
+      async function loadNodes() {
+        const defaults = await loadDefaultNodesFromIndex();
+        const snapshot = await getDoc(mapRef);
+        nodes = snapshot.exists() && Array.isArray(snapshot.data().nodes) ? snapshot.data().nodes : defaults;
+      }
+
+      async function saveNodes(message) {
+        await setDoc(mapRef, {
+          nodes: serializeNodes(),
+          updatedAt: serverTimestamp(),
+          updatedBy: auth.currentUser.email || auth.currentUser.uid
+        }, { merge: true });
+        render();
+        showStatus(message);
+      }
+
+      function fillParentSelect(select, type, currentParent = '') {
+        select.innerHTML = parentOptions(type).map((parent) => (
+          `<option value="${parent.id}" ${parent.id === currentParent ? 'selected' : ''}>${parent.label}</option>`
+        )).join('');
+      }
+
+      function syncSelectedNode() {
+        const node = nodes.find((item) => item.id === $('node-select').value);
+        if (!node) return;
+        $('node-label').value = node.label || '';
+        $('node-desc').value = node.desc || '';
+        $('node-website').value = node.website || '';
+        $('node-hidden').checked = Boolean(node.hidden);
+        fillParentSelect($('node-parent'), node.type, node.parent);
+      }
+
+      function render() {
+        const visible = nodes.filter(isVisible);
+        $('country-count').textContent = visible.filter((node) => node.parent === 'root').length;
+        $('category-count').textContent = visible.filter((node) => node.type === 'categories').length;
+        $('brand-count').textContent = visible.filter((node) => node.type === 'brands' && node.brand).length;
+
+        const editable = nodes.filter((node) => node.id !== 'root' && !node.deleted);
+        const previous = $('node-select').value;
+        $('node-select').innerHTML = editable.map((node) => (
+          `<option value="${node.id}" ${node.id === previous ? 'selected' : ''}>${node.type}: ${node.label}${node.hidden ? ' (hidden)' : ''}</option>`
+        )).join('');
+        if (!$('node-select').value && editable[0]) $('node-select').value = editable[0].id;
+        syncSelectedNode();
+        fillParentSelect($('new-parent'), $('new-type').value);
+      }
+
+      $('login-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        $('login-error').classList.add('hidden');
+        try {
+          await signInWithEmailAndPassword(auth, $('email').value.trim(), $('password').value);
+          $('login-form').reset();
+        } catch {
+          $('login-error').textContent = 'Email or password is not correct.';
+          $('login-error').classList.remove('hidden');
+        }
+      });
+
+      $('signout').addEventListener('click', () => signOut(auth));
+      $('node-select').addEventListener('change', syncSelectedNode);
+      $('new-type').addEventListener('change', () => fillParentSelect($('new-parent'), $('new-type').value));
+
+      $('edit-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        try {
+          const node = nodes.find((item) => item.id === $('node-select').value);
+          if (!node) return;
+          const label = clean($('node-label').value);
+          if (!label) return showStatus('Name is required.', true);
+          node.label = label;
+          node.desc = $('node-desc').value.trim();
+          node.parent = $('node-parent').value || node.parent;
+          node.hidden = $('node-hidden').checked;
+          if (node.type === 'brands') {
+            node.website = $('node-website').value.trim() ? normalizeUrl($('node-website').value) : '';
+            node.brand = true;
+          }
+          updateLevel(node);
+          await saveNodes('Saved.');
+        } catch (error) {
+          showStatus(error.message || 'Could not save.', true);
+        }
+      });
+
+      $('delete-node').addEventListener('click', async () => {
+        const node = nodes.find((item) => item.id === $('node-select').value);
+        if (!node) return;
+        markDeleted(node.id);
+        await saveNodes('Deleted.');
+      });
+
+      $('add-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        try {
+          const type = $('new-type').value;
+          const label = clean($('new-label').value);
+          if (!label) return showStatus('Name is required.', true);
+          const node = {
+            id: `admin_${type}_${Date.now()}`,
+            label,
+            parent: $('new-parent').value,
+            level: 1,
+            type,
+            desc: $('new-desc').value.trim(),
+            website: '',
+            brand: type === 'brands'
+          };
+          if (type === 'brands') node.website = normalizeUrl($('new-website').value);
+          updateLevel(node);
+          nodes.push(node);
+          $('add-form').reset();
+          await saveNodes('Added.');
+        } catch (error) {
+          showStatus(error.message || 'Could not add item.', true);
+        }
+      });
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          $('auth-status').textContent = 'Locked';
+          $('login-view').classList.remove('hidden');
+          $('dashboard-view').classList.add('hidden');
+          return;
+        }
+
+        $('auth-status').textContent = 'Unlocked';
+        $('admin-email').textContent = user.email || 'admin';
+        $('login-view').classList.add('hidden');
+        $('dashboard-view').classList.remove('hidden');
+        await loadNodes();
+        render();
+      });
+    </script>
+  </body>
+</html>
