@@ -2007,8 +2007,10 @@
 
       // Initial Bootstrap Sourcing Dashboard
       window.addEventListener('load', async () => {
+        let siteInfo = null;
         if (window.loadToyzaSiteInfo) {
-          applySiteInfo(await window.loadToyzaSiteInfo());
+          siteInfo = await window.loadToyzaSiteInfo();
+          applySiteInfo(siteInfo);
         }
         await loadSavedToyzaMapConfig();
         assignPositions();
@@ -2018,8 +2020,7 @@
         setupDragAndZoom();
         requestAnimationFrame(tick);
 
-        // Visual success indicator on boot
-        showToast("Welcome to Toyza World! Prinsengracht office online.");
+        showToast(siteInfo?.welcomeMessage || "Welcome to Toyza World.");
       });
 
       // Handle window resizes safely
