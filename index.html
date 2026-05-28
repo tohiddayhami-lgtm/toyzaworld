@@ -35,6 +35,7 @@
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
       import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics.js";
       import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+      import { getFirestore, doc, getDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
       const firebaseConfig = {
         apiKey: "AIzaSyA7_yhgxYtUb_2YroHjzF_fO_CIsWCOxg8",
@@ -48,6 +49,8 @@
 
       const firebaseApp = initializeApp(firebaseConfig);
       const firebaseAuth = getAuth(firebaseApp);
+      const firebaseDb = getFirestore(firebaseApp);
+      const toyMapConfigRef = doc(firebaseDb, 'siteConfig', 'toyMap');
 
       isSupported()
         .then((supported) => {
@@ -88,6 +91,9 @@
           status.innerText = 'Authenticated with Firebase';
 
           window.refreshToyzaAdminStats();
+          if (window.refreshAdminMapEditor) {
+            window.refreshAdminMapEditor();
+          }
         } else {
           locked.classList.remove('hidden');
           unlocked.classList.add('hidden');
@@ -103,6 +109,35 @@
         document.getElementById('admin-country-count').innerText = stats.countries;
         document.getElementById('admin-category-count').innerText = stats.categories;
         document.getElementById('admin-brand-count').innerText = stats.brands;
+      };
+
+      window.isToyzaAdminAuthenticated = function () {
+        return Boolean(firebaseAuth.currentUser);
+      };
+
+      window.loadToyzaMapConfig = async function () {
+        try {
+          const snapshot = await getDoc(toyMapConfigRef);
+          if (!snapshot.exists()) return null;
+
+          const data = snapshot.data();
+          return Array.isArray(data.nodes) ? data.nodes : null;
+        } catch (error) {
+          console.warn('Toyza map config could not be loaded from Firestore.', error);
+          return null;
+        }
+      };
+
+      window.saveToyzaMapConfig = async function (nodes) {
+        if (!firebaseAuth.currentUser) {
+          throw new Error('Admin authentication is required.');
+        }
+
+        await setDoc(toyMapConfigRef, {
+          nodes,
+          updatedAt: serverTimestamp(),
+          updatedBy: firebaseAuth.currentUser.email || firebaseAuth.currentUser.uid
+        }, { merge: true });
       };
 
       window.addEventListener('DOMContentLoaded', () => {
@@ -650,14 +685,84 @@
                   </div>
                 </div>
 
-                <div class="mt-6 bg-white border-2 border-dashed border-slateLines p-4 rounded">
-                  <h4 class="font-sans font-extrabold text-[#1D3557] text-[11px] uppercase tracking-wider mb-2">Quick Admin Notes</h4>
-                  <p class="font-sans text-xs sm:text-sm text-deepNavy/80 leading-relaxed">
-                    Use the toy map category panels to add brand names and website links. For production-only data access, also protect Firestore or database rules in Firebase.
-                  </p>
-                  <a href="#catalog-area" class="inline-flex mt-4 px-4 py-2 bg-deepNavy text-white border-2 border-deepNavy font-sans font-bold text-[10px] uppercase tracking-wider shadow-[3px_3px_0px_#1D3557] hover:bg-brandRed transition-all">
-                    Open Toy Map
-                  </a>
+                <div class="mt-6 grid grid-cols-1 gap-5">
+                  <div class="bg-white border-2 border-dashed border-slateLines p-4 rounded">
+                    <h4 class="font-sans font-extrabold text-[#1D3557] text-[11px] uppercase tracking-wider mb-2">Manager Only</h4>
+                    <p class="font-sans text-xs sm:text-sm text-deepNavy/80 leading-relaxed">
+                      Customers can only view categories and click brand websites. Map edits, moves, hiding, deleting, and adding links are controlled here after Firebase login.
+                    </p>
+                  </div>
+
+                  <form id="admin-map-edit-form" class="bg-warmOffwhite border-2 border-deepNavy p-4 rounded shadow-[3px_3px_0px_rgba(29,53,87,0.12)] grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="sm:col-span-2">
+                      <label class="block text-[10px] font-bold uppercase text-[#1D3557] mb-1">Select Map Item</label>
+                      <select id="admin-node-select" class="w-full px-3 py-2 border-2 border-deepNavy bg-white font-sans text-sm rounded"></select>
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-bold uppercase text-[#1D3557] mb-1">Name</label>
+                      <input id="admin-node-label" type="text" required class="w-full px-3 py-2 border-2 border-deepNavy bg-white font-sans text-sm rounded">
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-bold uppercase text-[#1D3557] mb-1">Move Under</label>
+                      <select id="admin-node-parent" class="w-full px-3 py-2 border-2 border-deepNavy bg-white font-sans text-sm rounded"></select>
+                    </div>
+                    <div class="sm:col-span-2">
+                      <label class="block text-[10px] font-bold uppercase text-[#1D3557] mb-1">Description</label>
+                      <textarea id="admin-node-desc" rows="2" class="w-full px-3 py-2 border-2 border-deepNavy bg-white font-sans text-sm rounded"></textarea>
+                    </div>
+                    <div class="sm:col-span-2">
+                      <label class="block text-[10px] font-bold uppercase text-[#1D3557] mb-1">Brand Website Link</label>
+                      <input id="admin-node-website" type="text" placeholder="Only for brand items" class="w-full px-3 py-2 border-2 border-deepNavy bg-white font-sans text-sm rounded">
+                    </div>
+                    <label class="sm:col-span-2 flex items-center gap-2 text-xs font-bold text-deepNavy">
+                      <input id="admin-node-hidden" type="checkbox" class="accent-brandRed">
+                      Hide this item from customers
+                    </label>
+                    <div id="admin-map-status" class="hidden sm:col-span-2 text-xs font-bold p-3 rounded"></div>
+                    <div class="sm:col-span-2 flex flex-col sm:flex-row gap-3 justify-between">
+                      <button type="button" id="admin-delete-node" class="px-4 py-2 bg-white border-2 border-brandRed text-brandRed font-sans font-bold text-xs uppercase tracking-wider shadow-[3px_3px_0px_#1D3557] hover:bg-brandRed hover:text-white transition-all">
+                        Delete Item
+                      </button>
+                      <button type="submit" class="px-5 py-2 bg-deepNavy text-white border-2 border-deepNavy font-sans font-bold text-xs uppercase tracking-wider shadow-[3px_3px_0px_#1D3557] hover:bg-brandRed transition-all">
+                        Save Map Changes
+                      </button>
+                    </div>
+                  </form>
+
+                  <form id="admin-map-add-form" class="bg-white border-2 border-deepNavy p-4 rounded shadow-[3px_3px_0px_rgba(29,53,87,0.12)] grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-[10px] font-bold uppercase text-[#1D3557] mb-1">New Item Type</label>
+                      <select id="admin-new-type" class="w-full px-3 py-2 border-2 border-deepNavy bg-white font-sans text-sm rounded">
+                        <option value="countries">Country</option>
+                        <option value="categories">Category</option>
+                        <option value="brands">Brand Link</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-bold uppercase text-[#1D3557] mb-1">Add Under</label>
+                      <select id="admin-new-parent" class="w-full px-3 py-2 border-2 border-deepNavy bg-white font-sans text-sm rounded"></select>
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-bold uppercase text-[#1D3557] mb-1">Name</label>
+                      <input id="admin-new-label" type="text" required placeholder="e.g. LEGO" class="w-full px-3 py-2 border-2 border-deepNavy bg-white font-sans text-sm rounded">
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-bold uppercase text-[#1D3557] mb-1">Website For Brand</label>
+                      <input id="admin-new-website" type="text" placeholder="https://www.lego.com" class="w-full px-3 py-2 border-2 border-deepNavy bg-white font-sans text-sm rounded">
+                    </div>
+                    <div class="sm:col-span-2">
+                      <label class="block text-[10px] font-bold uppercase text-[#1D3557] mb-1">Description</label>
+                      <textarea id="admin-new-desc" rows="2" class="w-full px-3 py-2 border-2 border-deepNavy bg-white font-sans text-sm rounded"></textarea>
+                    </div>
+                    <div class="sm:col-span-2 flex justify-between items-center gap-3">
+                      <a href="#catalog-area" class="px-4 py-2 bg-white border-2 border-deepNavy text-deepNavy font-sans font-bold text-[10px] uppercase tracking-wider shadow-[3px_3px_0px_#1D3557] hover:bg-toyOrange transition-all">
+                        View Map
+                      </a>
+                      <button type="submit" class="px-5 py-2 bg-brandRed text-white border-2 border-deepNavy font-sans font-bold text-xs uppercase tracking-wider shadow-[3px_3px_0px_#1D3557] hover:bg-deepNavy transition-all">
+                        Add Item
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
             </div>
@@ -741,24 +846,6 @@
             <span id="panel-website-label">Open website</span>
             <span class="text-base leading-none">↗</span>
           </a>
-        </div>
-
-        <!-- Add Brand Form -->
-        <div id="panel-brand-editor" class="hidden bg-warmOffwhite border-2 border-deepNavy p-4 rounded shadow-[3px_3px_0px_rgba(29,53,87,0.12)]">
-          <h4 class="font-sans font-extrabold text-[#1D3557] text-[11px] uppercase tracking-wider mb-3">Add Brand To This Category</h4>
-          <form onsubmit="handleBrandAdd(event)" class="flex flex-col gap-3">
-            <div>
-              <label class="block text-[9px] font-bold uppercase text-deepNavy mb-1">Brand Name</label>
-              <input id="new-brand-name" type="text" required placeholder="e.g. LEGO" class="w-full px-3 py-2 border-2 border-deepNavy rounded bg-white text-xs font-sans focus:outline-none focus:ring-1 focus:ring-brandRed text-deepNavy">
-            </div>
-            <div>
-              <label class="block text-[9px] font-bold uppercase text-deepNavy mb-1">Website Link</label>
-              <input id="new-brand-url" type="text" required placeholder="e.g. https://www.lego.com" class="w-full px-3 py-2 border-2 border-deepNavy rounded bg-white text-xs font-sans focus:outline-none focus:ring-1 focus:ring-brandRed text-deepNavy">
-            </div>
-            <button type="submit" class="w-full py-2 bg-deepNavy text-white font-sans font-bold text-[10px] uppercase tracking-wider border-2 border-deepNavy shadow-[3px_3px_0px_#1D3557] hover:bg-brandRed transition-all">
-              Add Brand Website
-            </button>
-          </form>
         </div>
 
         <!-- Sourcing Metrics box -->
@@ -915,16 +1002,25 @@
         return new URL(withProtocol).href;
       }
 
-      function getCustomBrandNodes() {
-        try {
-          return JSON.parse(localStorage.getItem('toyzaCustomBrands') || '[]');
-        } catch {
-          return [];
+      function isCatalogVisible(node) {
+        if (!node || node.hidden || node.deleted) return false;
+
+        let parentId = node.parent;
+        while (parentId) {
+          const parent = NODES.find(n => n.id === parentId);
+          if (!parent || parent.hidden || parent.deleted) return false;
+          parentId = parent.parent;
         }
+
+        return true;
       }
 
-      function saveCustomBrandNodes() {
-        const customNodes = NODES.filter(n => n.customBrand).map(n => ({
+      function catalogNodes() {
+        return NODES.filter(isCatalogVisible);
+      }
+
+      function serializeMapNodes() {
+        return NODES.map(n => ({
           id: n.id,
           label: n.label,
           parent: n.parent,
@@ -932,21 +1028,33 @@
           type: n.type,
           desc: n.desc,
           website: n.website,
-          brand: true,
-          customBrand: true
+          brand: Boolean(n.brand),
+          hidden: Boolean(n.hidden),
+          deleted: Boolean(n.deleted)
         }));
-        try {
-          localStorage.setItem('toyzaCustomBrands', JSON.stringify(customNodes));
-        } catch {
-          showToast('Brand added for this session, but browser storage is unavailable.');
+      }
+
+      function replaceMapNodes(nodes) {
+        if (!Array.isArray(nodes) || nodes.length === 0) return;
+        NODES.splice(0, NODES.length, ...nodes);
+        NODES.forEach(n => initializeNodeState(n));
+      }
+
+      async function loadSavedToyzaMapConfig() {
+        if (!window.loadToyzaMapConfig) return;
+        const savedNodes = await window.loadToyzaMapConfig();
+        if (savedNodes) {
+          replaceMapNodes(savedNodes);
         }
       }
 
-      getCustomBrandNodes().forEach(node => {
-        if (node && node.id && node.parent && node.label && node.website && !NODES.some(n => n.id === node.id)) {
-          NODES.push(node);
+      async function persistMapNodes() {
+        if (!window.isToyzaAdminAuthenticated || !window.isToyzaAdminAuthenticated()) {
+          throw new Error('Admin authentication is required.');
         }
-      });
+
+        await window.saveToyzaMapConfig(serializeMapNodes());
+      }
 
       // Initialize defaults
       NODES.forEach(n => {
@@ -954,15 +1062,17 @@
       });
 
       window.getToyzaMapStats = function () {
+        const visibleNodes = catalogNodes();
         return {
-          countries: NODES.filter(n => n.parent === 'root').length,
-          categories: NODES.filter(n => n.type === 'categories').length,
-          brands: NODES.filter(n => n.type === 'brands' && n.brand).length
+          countries: visibleNodes.filter(n => n.parent === 'root').length,
+          categories: visibleNodes.filter(n => n.type === 'categories').length,
+          brands: visibleNodes.filter(n => n.type === 'brands' && n.brand).length
         };
       };
 
       // Layout assignment math
       function assignPositions() {
+        const visibleNodes = catalogNodes();
         // 1. Root Node Center
         const root = NODES.find(n => n.id === 'root');
         root.targetX = 0;
@@ -970,7 +1080,7 @@
         root.angle = 0;
 
         // 2. Level 1 country branches orbit around Toyza World
-        const l1Nodes = NODES.filter(n => n.parent === 'root');
+        const l1Nodes = visibleNodes.filter(n => n.parent === 'root');
         const R1 = 310; // radius from Root
         const startAngle = -155 * Math.PI / 180;
         const spreadAngle = 310 * Math.PI / 180;
@@ -984,7 +1094,7 @@
         // 3. Level 2 category nodes spread from each country
         const R2 = 225; // radius from country
         l1Nodes.forEach(parent => {
-          const children = NODES.filter(n => n.parent === parent.id);
+          const children = visibleNodes.filter(n => n.parent === parent.id);
           const count = children.length;
           if (count === 0) return;
 
@@ -1001,9 +1111,9 @@
 
         // 4. Level 3 brand nodes sit under the selected category
         const R3 = 160; // radius from category
-        const l2Nodes = NODES.filter(n => n.level === 2);
+        const l2Nodes = visibleNodes.filter(n => n.level === 2);
         l2Nodes.forEach(parent => {
-          const children = NODES.filter(n => n.parent === parent.id);
+          const children = visibleNodes.filter(n => n.parent === parent.id);
           const count = children.length;
           if (count === 0) return;
 
@@ -1021,9 +1131,9 @@
 
         // 5. Level 4 Nodes (Souring manufacturers under specific category branches)
         const R4 = 130; // radius from L3
-        const l3Nodes = NODES.filter(n => n.level === 3);
+        const l3Nodes = visibleNodes.filter(n => n.level === 3);
         l3Nodes.forEach(parent => {
-          const children = NODES.filter(n => n.parent === parent.id);
+          const children = visibleNodes.filter(n => n.parent === parent.id);
           const count = children.length;
           if (count === 0) return;
 
@@ -1046,7 +1156,7 @@
         if (!container) return;
 
         let html = '';
-        NODES.forEach(node => {
+        catalogNodes().forEach(node => {
           let styleClass = '';
           let innerHTML = '';
           
@@ -1151,7 +1261,7 @@
         const node = NODES.find(n => n.id === nodeId);
         if (!node) return;
 
-        const children = NODES.filter(n => n.parent === node.id);
+        const children = catalogNodes().filter(n => n.parent === node.id);
         const hasChildren = children.length > 0;
 
         if (hasChildren) {
@@ -1189,7 +1299,6 @@
         const websiteWrap = document.getElementById('panel-website-wrap');
         const websiteLink = document.getElementById('panel-website');
         const websiteLabel = document.getElementById('panel-website-label');
-        const brandEditor = document.getElementById('panel-brand-editor');
 
         let badgeColor = 'bg-delftBlue';
         let badgeText = 'COUNTRY';
@@ -1216,14 +1325,6 @@
           websiteLink.href = '#';
           websiteLabel.innerText = 'Open website';
           websiteWrap.classList.add('hidden');
-        }
-
-        if (node.type === 'categories') {
-          brandEditor.classList.remove('hidden');
-          document.getElementById('new-brand-name').value = '';
-          document.getElementById('new-brand-url').value = '';
-        } else {
-          brandEditor.classList.add('hidden');
         }
 
         let lt = "4-6 Weeks";
@@ -1295,65 +1396,220 @@
         showToast(`Catalog Request for "${title}" sent! Our trade desk will contact ${email}.`);
       }
 
-      function handleBrandAdd(e) {
-        e.preventDefault();
+      function getNodeTypeLabel(type) {
+        if (type === 'countries') return 'Country';
+        if (type === 'categories') return 'Category';
+        if (type === 'brands') return 'Brand';
+        return 'Root';
+      }
 
-        const category = NODES.find(n => n.id === activePanelNodeId);
-        if (!category || category.type !== 'categories') {
-          showToast('Please open a toy category before adding a brand.');
-          return;
+      function getEditableNodes() {
+        return NODES.filter(n => n.id !== 'root' && !n.deleted);
+      }
+
+      function getParentOptionsForType(type) {
+        if (type === 'countries') {
+          return NODES.filter(n => n.id === 'root');
         }
 
-        const nameInput = document.getElementById('new-brand-name');
-        const urlInput = document.getElementById('new-brand-url');
-        const brandName = sanitizePlainText(nameInput.value);
-
-        let website;
-        try {
-          website = normalizeWebsiteUrl(urlInput.value);
-        } catch {
-          showToast('Please enter a valid website link.');
-          return;
+        if (type === 'categories') {
+          return NODES.filter(n => n.type === 'countries' && !n.deleted);
         }
 
-        if (!brandName) {
-          showToast('Please enter a brand name.');
-          return;
+        if (type === 'brands') {
+          return NODES.filter(n => n.type === 'categories' && !n.deleted);
         }
 
-        const newNode = {
-          id: `custom_${category.id}_${Date.now()}`,
-          label: brandName,
-          parent: category.id,
-          level: category.level + 1,
-          type: 'brands',
-          desc: `Custom brand website target added under ${category.label}.`,
-          website,
-          brand: true,
-          customBrand: true
-        };
+        return [];
+      }
 
-        initializeNodeState(newNode);
-        NODES.push(newNode);
-        category.expanded = true;
+      function updateNodeLevelFromParent(node) {
+        const parent = NODES.find(n => n.id === node.parent);
+        node.level = parent ? parent.level + 1 : 1;
+      }
 
-        let parentId = category.parent;
-        while (parentId) {
-          const parentNode = NODES.find(n => n.id === parentId);
-          if (!parentNode) break;
-          parentNode.expanded = true;
-          parentId = parentNode.parent;
+      function markDeletedWithDescendants(nodeId) {
+        const node = NODES.find(n => n.id === nodeId);
+        if (!node) return;
+
+        node.deleted = true;
+        NODES.filter(n => n.parent === nodeId).forEach(child => {
+          markDeletedWithDescendants(child.id);
+        });
+      }
+
+      function showAdminMapStatus(message, isError = false) {
+        const status = document.getElementById('admin-map-status');
+        if (!status) return;
+
+        status.innerText = message;
+        status.className = `sm:col-span-2 text-xs font-bold p-3 rounded ${isError ? 'text-brandRed bg-red-50 border-2 border-brandRed' : 'text-green-700 bg-green-50 border-2 border-green-700'}`;
+        status.classList.remove('hidden');
+      }
+
+      function refreshAdminParentOptions(type, selectEl, currentParent = null) {
+        if (!selectEl) return;
+
+        selectEl.innerHTML = getParentOptionsForType(type).map(parent => `
+          <option value="${parent.id}" ${parent.id === currentParent ? 'selected' : ''}>${parent.label}</option>
+        `).join('');
+      }
+
+      function refreshAdminMapEditor() {
+        const select = document.getElementById('admin-node-select');
+        const newType = document.getElementById('admin-new-type');
+        const newParent = document.getElementById('admin-new-parent');
+        if (!select || !newType || !newParent) return;
+
+        const previousValue = select.value;
+        const editableNodes = getEditableNodes();
+        select.innerHTML = editableNodes.map(node => `
+          <option value="${node.id}" ${node.id === previousValue ? 'selected' : ''}>
+            ${getNodeTypeLabel(node.type)}: ${node.label}${node.hidden ? ' (hidden)' : ''}
+          </option>
+        `).join('');
+
+        if (!select.value && editableNodes[0]) {
+          select.value = editableNodes[0].id;
         }
 
-        saveCustomBrandNodes();
+        syncAdminSelectedNode();
+        refreshAdminParentOptions(newType.value, newParent);
+      }
+
+      window.refreshAdminMapEditor = refreshAdminMapEditor;
+
+      function syncAdminSelectedNode() {
+        const select = document.getElementById('admin-node-select');
+        if (!select) return;
+
+        const node = NODES.find(n => n.id === select.value);
+        if (!node) return;
+
+        document.getElementById('admin-node-label').value = node.label || '';
+        document.getElementById('admin-node-desc').value = node.desc || '';
+        document.getElementById('admin-node-website').value = node.website || '';
+        document.getElementById('admin-node-hidden').checked = Boolean(node.hidden);
+        refreshAdminParentOptions(node.type, document.getElementById('admin-node-parent'), node.parent);
+      }
+
+      function refreshMapAfterAdminChange() {
         assignPositions();
         createDOMNodes();
         buildMobileAccordion();
         if (window.refreshToyzaAdminStats) {
           window.refreshToyzaAdminStats();
         }
-        openSidePanel(newNode);
-        showToast(`${brandName} added with website link.`);
+        refreshAdminMapEditor();
+      }
+
+      async function saveAdminMapChange(actionMessage) {
+        await persistMapNodes();
+        refreshMapAfterAdminChange();
+        showAdminMapStatus(actionMessage);
+        showToast(actionMessage);
+      }
+
+      function setupAdminMapEditor() {
+        const editForm = document.getElementById('admin-map-edit-form');
+        const addForm = document.getElementById('admin-map-add-form');
+        const select = document.getElementById('admin-node-select');
+        const deleteButton = document.getElementById('admin-delete-node');
+        const newType = document.getElementById('admin-new-type');
+
+        select?.addEventListener('change', syncAdminSelectedNode);
+        newType?.addEventListener('change', () => {
+          refreshAdminParentOptions(newType.value, document.getElementById('admin-new-parent'));
+        });
+
+        editForm?.addEventListener('submit', async (event) => {
+          event.preventDefault();
+
+          try {
+            const node = NODES.find(n => n.id === select.value);
+            if (!node) return;
+
+            const nextLabel = sanitizePlainText(document.getElementById('admin-node-label').value);
+            if (!nextLabel) {
+              showAdminMapStatus('Name is required.', true);
+              return;
+            }
+
+            node.label = nextLabel;
+            node.desc = document.getElementById('admin-node-desc').value.trim();
+            node.parent = document.getElementById('admin-node-parent').value || node.parent;
+            node.hidden = document.getElementById('admin-node-hidden').checked;
+
+            const websiteValue = document.getElementById('admin-node-website').value.trim();
+            if (node.type === 'brands') {
+              node.website = websiteValue ? normalizeWebsiteUrl(websiteValue) : '';
+              node.brand = true;
+            }
+
+            updateNodeLevelFromParent(node);
+            await saveAdminMapChange('Map item updated and saved to Firebase.');
+          } catch (error) {
+            showAdminMapStatus(error.message || 'Could not save this map item.', true);
+          }
+        });
+
+        addForm?.addEventListener('submit', async (event) => {
+          event.preventDefault();
+
+          try {
+            const type = document.getElementById('admin-new-type').value;
+            const label = sanitizePlainText(document.getElementById('admin-new-label').value);
+            const parent = document.getElementById('admin-new-parent').value;
+            const websiteValue = document.getElementById('admin-new-website').value.trim();
+
+            if (!label || !parent) {
+              showAdminMapStatus('Name and parent are required.', true);
+              return;
+            }
+
+            const newNode = {
+              id: `admin_${type}_${Date.now()}`,
+              label,
+              parent,
+              level: 1,
+              type,
+              desc: document.getElementById('admin-new-desc').value.trim(),
+              website: '',
+              brand: type === 'brands'
+            };
+
+            if (type === 'brands') {
+              if (!websiteValue) {
+                showAdminMapStatus('Brand website link is required for brand items.', true);
+                return;
+              }
+              newNode.website = normalizeWebsiteUrl(websiteValue);
+            }
+
+            updateNodeLevelFromParent(newNode);
+            initializeNodeState(newNode);
+            NODES.push(newNode);
+            addForm.reset();
+            refreshAdminParentOptions(document.getElementById('admin-new-type').value, document.getElementById('admin-new-parent'));
+            await saveAdminMapChange('New map item added and saved to Firebase.');
+          } catch (error) {
+            showAdminMapStatus(error.message || 'Could not add this map item.', true);
+          }
+        });
+
+        deleteButton?.addEventListener('click', async () => {
+          const node = NODES.find(n => n.id === select.value);
+          if (!node) return;
+
+          try {
+            markDeletedWithDescendants(node.id);
+            await saveAdminMapChange('Map item deleted and saved to Firebase.');
+          } catch (error) {
+            showAdminMapStatus(error.message || 'Could not delete this map item.', true);
+          }
+        });
+
+        refreshAdminMapEditor();
       }
 
       // Toast feedback helper
@@ -1386,7 +1642,7 @@
         const val = document.getElementById('search-input').value.trim().toLowerCase();
         const counter = document.getElementById('search-counter');
 
-        NODES.forEach(n => {
+        catalogNodes().forEach(n => {
           n.matched = false;
           n.hasMatchedDescendant = false;
         });
@@ -1397,7 +1653,7 @@
         }
 
         let matchCount = 0;
-        NODES.forEach(n => {
+        catalogNodes().forEach(n => {
           const matchLabel = n.label.toLowerCase().includes(val);
           const matchDesc = n.desc && n.desc.toLowerCase().includes(val);
           const matchWebsite = n.website && n.website.toLowerCase().includes(val);
@@ -1554,7 +1810,7 @@
         if (!g) return;
 
         let pathHTML = '';
-        NODES.forEach(node => {
+        catalogNodes().forEach(node => {
           if (node.id === 'root') return;
           const parent = NODES.find(n => n.id === node.parent);
           if (!parent) return;
@@ -1601,7 +1857,8 @@
         const container = document.getElementById('mobile-accordion-catalog');
         if (!container) return;
 
-        const l1Nodes = NODES.filter(n => n.parent === 'root');
+        const visibleNodes = catalogNodes();
+        const l1Nodes = visibleNodes.filter(n => n.parent === 'root');
         let html = '';
 
         l1Nodes.forEach(l1 => {
@@ -1610,7 +1867,7 @@
           else if (l1.type === 'categories') bg = 'bg-toyOrange';
           else if (l1.type === 'brands') bg = 'bg-brandRed';
 
-          const l2Children = NODES.filter(n => n.parent === l1.id);
+          const l2Children = visibleNodes.filter(n => n.parent === l1.id);
 
           html += `
             <div class="border-2 border-deepNavy shadow-[2.5px_2.5px_0px_#1D3557] bg-white overflow-hidden rounded mb-2.5">
@@ -1623,7 +1880,7 @@
           `;
 
           l2Children.forEach(l2 => {
-            const l3Children = NODES.filter(n => n.parent === l2.id);
+            const l3Children = visibleNodes.filter(n => n.parent === l2.id);
             const hasL3 = l3Children.length > 0;
 
             let strip = 'border-l-3 border-l-delftBlue';
@@ -1645,7 +1902,7 @@
                 ${hasL3 ? `
                   <div id="content-m-acc-${l2.id}" class="hidden pl-2.5 pr-0.5 mt-2 pt-2 border-t border-slate-100 flex flex-col gap-1.5 bg-[#FAFAF7]">
                     ${l3Children.map(l3 => {
-                      const l4Children = NODES.filter(n => n.parent === l3.id);
+                      const l4Children = visibleNodes.filter(n => n.parent === l3.id);
                       const hasL4 = l4Children.length > 0;
 
                       return `
@@ -1720,7 +1977,7 @@
         if (val.length === 0) return;
 
         // Traverse mobile elements, auto expand open all nodes that match
-        NODES.forEach(n => {
+        catalogNodes().forEach(n => {
           if (n.label.toLowerCase().includes(val) || (n.desc && n.desc.toLowerCase().includes(val)) || (n.website && n.website.toLowerCase().includes(val))) {
             let parentId = n.parent;
             while (parentId) {
@@ -1781,7 +2038,7 @@
         }
 
         NODES.forEach(node => {
-          let visible = true;
+          let visible = isCatalogVisible(node);
           let curr = node;
           
           // Climb ancestry tree. If any parent layout collapsed, node must snap-hide
@@ -1860,10 +2117,12 @@
       }
 
       // Initial Bootstrap Sourcing Dashboard
-      window.addEventListener('load', () => {
+      window.addEventListener('load', async () => {
+        await loadSavedToyzaMapConfig();
         assignPositions();
         createDOMNodes();
         buildMobileAccordion();
+        setupAdminMapEditor();
         setupDragAndZoom();
         requestAnimationFrame(tick);
 
