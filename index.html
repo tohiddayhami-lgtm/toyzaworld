@@ -441,18 +441,44 @@
 
         </div>
 
-        <!-- MOBILE FALLBACK ACCORDION VIEW -->
+        <!-- MOBILE CATALOG VIEW -->
         <div class="block md:hidden">
-          <div class="bg-white border-2 border-deepNavy p-3 shadow-[4px_4px_0px_#1D3557] mb-4 flex flex-col gap-2">
-            <label class="font-sans font-bold text-xs uppercase tracking-wider text-deepNavy block">Filter Global Index:</label>
-            <div class="relative">
-              <input type="text" id="mobile-search" oninput="handleMobileSearch(this.value)" placeholder="e.g. Selecta, LEGO, robotics..." class="w-full px-3 py-2 pr-8 border-2 border-slateLines focus:border-deepNavy focus:outline-none rounded text-sm text-deepNavy font-sans bg-warmOffwhite">
-              <button onclick="clearMobileSearch()" class="absolute right-3 top-2.5 text-[#1D3557]/50 hover:text-brandRed text-sm">✕</button>
+          <div class="bg-white border-2 border-deepNavy rounded-xl p-4 shadow-[5px_5px_0px_#1D3557] mb-4 flex flex-col gap-3">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="font-mono text-[9px] uppercase tracking-[0.2em] text-brandRed">Mobile Catalog</p>
+                <h3 class="font-display font-black text-2xl text-deepNavy leading-tight">Browse by Country</h3>
+                <p class="font-sans text-xs text-deepNavy/65 mt-1">Open one country at a time, then tap a category or brand for details.</p>
+              </div>
+              <button type="button" onclick="collapseMobileCatalog()" class="shrink-0 px-3 py-2 bg-warmOffwhite border-2 border-deepNavy rounded-lg text-[10px] font-bold uppercase tracking-wider text-deepNavy shadow-[2px_2px_0px_#1D3557] active:translate-x-[1px] active:translate-y-[1px]">
+                Close all
+              </button>
             </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center">
+              <div class="rounded-lg bg-warmOffwhite border border-slateLines px-2 py-2">
+                <span id="mobile-country-count" class="block font-display font-black text-lg text-delftBlue">0</span>
+                <span class="font-sans text-[9px] font-bold uppercase text-deepNavy/50">Countries</span>
+              </div>
+              <div class="rounded-lg bg-warmOffwhite border border-slateLines px-2 py-2">
+                <span id="mobile-category-count" class="block font-display font-black text-lg text-toyOrange">0</span>
+                <span class="font-sans text-[9px] font-bold uppercase text-deepNavy/50">Categories</span>
+              </div>
+              <div class="rounded-lg bg-warmOffwhite border border-slateLines px-2 py-2">
+                <span id="mobile-brand-count" class="block font-display font-black text-lg text-brandRed">0</span>
+                <span class="font-sans text-[9px] font-bold uppercase text-deepNavy/50">Brands</span>
+              </div>
+            </div>
+
+            <label class="font-sans font-bold text-[10px] uppercase tracking-wider text-deepNavy/60 block">Search catalog</label>
+            <div class="relative">
+              <input type="text" id="mobile-search" oninput="handleMobileSearch(this.value)" placeholder="LEGO, wooden toys, Germany..." class="w-full px-3 py-3 pr-10 border-2 border-slateLines focus:border-brandRed focus:outline-none rounded-lg text-sm text-deepNavy font-sans bg-warmOffwhite">
+              <button type="button" onclick="clearMobileSearch()" class="absolute right-3 top-3 text-[#1D3557]/50 hover:text-brandRed text-sm font-bold">X</button>
+            </div>
+            <p id="mobile-search-count" class="font-sans text-[10px] font-bold text-deepNavy/55">Tap a country to explore verified toy sources.</p>
           </div>
-          
-          <!-- Accordion list injections -->
-          <div id="mobile-accordion-catalog" class="flex flex-col gap-1">
+
+          <div id="mobile-accordion-catalog" class="flex flex-col gap-3">
             <!-- Filled via JS -->
           </div>
         </div>
@@ -1781,86 +1807,228 @@
         g.innerHTML = pathHTML;
       }
 
-      // Responsive mobile representation list accordion generator
+      let mobileOpenCountryId = null;
+      let mobileOpenCategoryId = null;
+      let mobileSearchQuery = '';
+
+      function escapeMobileHtml(value = '') {
+        return String(value).replace(/[&<>"']/g, char => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        }[char]));
+      }
+
+      function normalizeMobileSearch(value = '') {
+        return value.trim().toLowerCase();
+      }
+
+      function mobileNodeMatches(node, query) {
+        if (!query) return true;
+        return [node.label, node.desc, node.website]
+          .filter(Boolean)
+          .some(value => value.toLowerCase().includes(query));
+      }
+
+      function mobileChildNodes(parentId, type = null) {
+        return catalogNodes().filter(node => node.parent === parentId && (!type || node.type === type));
+      }
+
+      function mobileCategoryHasMatch(category, query) {
+        if (!query) return true;
+        return mobileNodeMatches(category, query) || mobileChildNodes(category.id).some(node => mobileNodeMatches(node, query));
+      }
+
+      function mobileCountryHasMatch(country, query) {
+        if (!query) return true;
+        return mobileNodeMatches(country, query) || mobileChildNodes(country.id).some(category => mobileCategoryHasMatch(category, query));
+      }
+
+      function updateMobileCatalogSummary(visibleNodes, query) {
+        const countryCount = document.getElementById('mobile-country-count');
+        const categoryCount = document.getElementById('mobile-category-count');
+        const brandCount = document.getElementById('mobile-brand-count');
+        const searchCount = document.getElementById('mobile-search-count');
+
+        if (countryCount) countryCount.innerText = visibleNodes.filter(node => node.parent === 'root').length;
+        if (categoryCount) categoryCount.innerText = visibleNodes.filter(node => node.type === 'categories').length;
+        if (brandCount) brandCount.innerText = visibleNodes.filter(node => node.type === 'brands' && node.brand).length;
+
+        if (searchCount) {
+          if (!query) {
+            searchCount.innerText = 'Tap a country to explore verified toy sources.';
+          } else {
+            const matches = visibleNodes.filter(node => mobileNodeMatches(node, query)).length;
+            searchCount.innerText = `${matches} matching source${matches === 1 ? '' : 's'} found.`;
+          }
+        }
+      }
+
+      function mobileVisibleCategories(country, query) {
+        const categories = mobileChildNodes(country.id, 'categories');
+        if (query && mobileNodeMatches(country, query)) return categories;
+        return query ? categories.filter(category => mobileCategoryHasMatch(category, query)) : categories;
+      }
+
+      function mobileVisibleBrands(category, query) {
+        const brands = mobileChildNodes(category.id);
+        if (query && mobileNodeMatches(category, query)) return brands;
+        return query ? brands.filter(brand => mobileNodeMatches(brand, query)) : brands;
+      }
+
+      // Controlled mobile catalog: one country and one category can be open.
       function buildMobileAccordion() {
         const container = document.getElementById('mobile-accordion-catalog');
         if (!container) return;
 
+        const query = mobileSearchQuery;
         const visibleNodes = catalogNodes();
-        const l1Nodes = visibleNodes.filter(n => n.parent === 'root');
-        let html = '';
+        const countries = visibleNodes
+          .filter(node => node.parent === 'root')
+          .filter(country => mobileCountryHasMatch(country, query));
 
-        l1Nodes.forEach(l1 => {
-          const l2Children = visibleNodes.filter(n => n.parent === l1.id);
+        updateMobileCatalogSummary(visibleNodes, query);
 
-          html += `
-            <details id="details-m-acc-${l1.id}" class="border-2 border-deepNavy shadow-[2.5px_2.5px_0px_#1D3557] bg-white overflow-hidden rounded mb-2.5">
-              <summary class="cursor-pointer list-none flex justify-between items-center text-left text-white font-sans font-bold text-xs uppercase tracking-wider px-4 py-3 bg-delftBlue">
-                <span>${l1.label}</span>
-                <span class="text-white/80">Tap</span>
-              </summary>
-              
-              <div class="p-2.5 bg-[#FAFAF7] flex flex-col gap-2">
+        if (countries.length === 0) {
+          container.innerHTML = `
+            <div class="bg-white border-2 border-dashed border-slateLines rounded-xl p-5 text-center">
+              <p class="font-display font-black text-xl text-deepNavy">No mobile catalog matches</p>
+              <p class="font-sans text-xs text-deepNavy/60 mt-1">Try a country, toy category, or brand name.</p>
+            </div>
           `;
+          return;
+        }
 
-          l2Children.forEach(l2 => {
-            const l3Children = visibleNodes.filter(n => n.parent === l2.id);
-            const hasL3 = l3Children.length > 0;
+        container.innerHTML = countries.map(country => {
+          const categories = mobileVisibleCategories(country, query);
+          const countryOpen = query ? true : mobileOpenCountryId === country.id;
+          const safeCountryId = escapeMobileHtml(country.id);
+          const countryLabel = escapeMobileHtml(country.label);
+          const countryDesc = escapeMobileHtml(country.desc || 'Verified Toyza World sourcing route.');
+          const categoryCount = categories.length;
+          const brandCount = categories.reduce((count, category) => count + mobileVisibleBrands(category, query).length, 0);
 
-            html += `
-              <details id="details-m-acc-${l2.id}" class="border border-slate-300 bg-white rounded border-l-4 border-l-toyOrange shadow-sm">
-                <summary class="cursor-pointer list-none flex justify-between items-center px-3 py-2 hover:bg-neutral-50">
-                  <span class="font-sans font-extrabold text-[#1D3557] text-xs">${l2.label}</span>
-                  <div class="flex items-center gap-1.5 shrink-0">
-                    <button type="button" class="text-[9px] font-bold text-white bg-deepNavy px-2 py-0.5 rounded" onclick="event.preventDefault(); event.stopPropagation(); openMobileDetail('${l2.id}')">Info</button>
-                    ${hasL3 ? '<span class="text-[10px] text-deepNavy/50">Open</span>' : ''}
+          return `
+            <article class="bg-white border-2 border-deepNavy rounded-xl overflow-hidden shadow-[4px_4px_0px_#1D3557] ${countryOpen ? 'ring-2 ring-toyOrange/30' : ''}">
+              <button type="button" onclick="toggleMobileCountry('${safeCountryId}')" class="w-full text-left p-4 flex items-start justify-between gap-3 bg-white active:bg-warmOffwhite">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-delftBlue border border-deepNavy shrink-0"></span>
+                    <h4 class="font-display font-black text-xl text-deepNavy leading-tight">${countryLabel}</h4>
                   </div>
-                </summary>
+                  <p class="font-sans text-xs text-deepNavy/65 mt-1 line-clamp-2">${countryDesc}</p>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="px-2 py-1 rounded-full bg-delftBlue/10 text-delftBlue text-[9px] font-bold uppercase">${categoryCount} categories</span>
+                    <span class="px-2 py-1 rounded-full bg-brandRed/10 text-brandRed text-[9px] font-bold uppercase">${brandCount} brands</span>
+                  </div>
+                </div>
+                <span class="shrink-0 px-3 py-1.5 rounded-full border border-deepNavy text-[10px] font-bold uppercase ${countryOpen ? 'bg-deepNavy text-white' : 'bg-warmOffwhite text-deepNavy'}">
+                  ${countryOpen ? 'Close' : 'Open'}
+                </span>
+              </button>
 
-                ${hasL3 ? `
-                  <div class="px-2 pb-2 pt-1 border-t border-slate-100 flex flex-col gap-1.5 bg-[#FAFAF7]">
-                    ${l3Children.map(l3 => `
-                      <div class="bg-white p-2 border border-slate-200 rounded">
-                        <div class="flex justify-between items-center gap-2">
-                          <button type="button" class="text-left font-sans text-[11px] font-bold text-deepNavy flex-1" onclick="openMobileDetail('${l3.id}')">${l3.label}</button>
-                          ${l3.website ? `
-                            <a href="${l3.website}" target="_blank" rel="noopener noreferrer" class="shrink-0 text-[9px] font-bold text-white bg-brandRed px-2 py-1 rounded uppercase tracking-wide">
-                              Open Website
-                            </a>
-                          ` : `
-                            <button type="button" class="shrink-0 text-[9px] font-bold text-white bg-slate-500 px-2 py-1 rounded" onclick="openMobileDetail('${l3.id}')">Info</button>
-                          `}
+              ${countryOpen ? `
+                <div class="bg-warmOffwhite border-t-2 border-deepNavy p-3 flex flex-col gap-2">
+                  ${categories.length ? categories.map(category => {
+                    const brands = mobileVisibleBrands(category, query);
+                    const categoryOpen = query ? mobileCategoryHasMatch(category, query) : mobileOpenCategoryId === category.id;
+                    const safeCategoryId = escapeMobileHtml(category.id);
+                    const categoryLabel = escapeMobileHtml(category.label);
+                    const categoryDesc = escapeMobileHtml(category.desc || 'Category details');
+
+                    return `
+                      <section class="bg-white border border-slateLines rounded-lg overflow-hidden ${categoryOpen ? 'border-l-4 border-l-toyOrange' : ''}">
+                        <div class="flex items-stretch">
+                          <button type="button" onclick="toggleMobileCategory('${safeCategoryId}')" class="flex-1 text-left px-3 py-3">
+                            <div class="flex items-center justify-between gap-2">
+                              <span class="font-sans font-extrabold text-sm text-deepNavy">${categoryLabel}</span>
+                              <span class="text-[10px] font-bold text-deepNavy/45">${brands.length} links</span>
+                            </div>
+                            <p class="font-sans text-[11px] text-deepNavy/55 mt-1 line-clamp-2">${categoryDesc}</p>
+                          </button>
+                          <button type="button" onclick="openMobileDetail('${safeCategoryId}')" class="px-3 border-l border-slateLines text-[10px] font-bold uppercase text-delftBlue bg-white">
+                            Info
+                          </button>
                         </div>
-                      </div>
-                    `).join('')}
-                  </div>
-                ` : ''}
-              </details>
-            `;
-          });
 
-          html += `
-              </div>
-            </details>
+                        ${categoryOpen ? `
+                          <div class="border-t border-slateLines bg-[#FAFAF7] p-2 flex flex-col gap-2">
+                            ${brands.length ? brands.map(brand => {
+                              const safeBrandId = escapeMobileHtml(brand.id);
+                              const brandLabel = escapeMobileHtml(brand.label);
+                              const brandDesc = escapeMobileHtml(brand.desc || 'Brand source');
+                              const brandUrl = escapeMobileHtml(brand.website || '');
+
+                              return `
+                                <div class="bg-white border border-slate-200 rounded-lg p-3 flex items-start justify-between gap-3">
+                                  <button type="button" onclick="openMobileDetail('${safeBrandId}')" class="text-left flex-1 min-w-0">
+                                    <span class="block font-sans font-black text-sm text-deepNavy">${brandLabel}</span>
+                                    <span class="block font-sans text-[11px] text-deepNavy/55 mt-0.5 line-clamp-2">${brandDesc}</span>
+                                  </button>
+                                  ${brand.website ? `
+                                    <a href="${brandUrl}" target="_blank" rel="noopener noreferrer" class="shrink-0 px-3 py-2 bg-brandRed text-white rounded-md text-[9px] font-bold uppercase">
+                                      Visit
+                                    </a>
+                                  ` : `
+                                    <button type="button" onclick="openMobileDetail('${safeBrandId}')" class="shrink-0 px-3 py-2 bg-deepNavy text-white rounded-md text-[9px] font-bold uppercase">
+                                      Info
+                                    </button>
+                                  `}
+                                </div>
+                              `;
+                            }).join('') : `
+                              <button type="button" onclick="openMobileDetail('${safeCategoryId}')" class="w-full px-3 py-3 bg-white border border-dashed border-slateLines rounded-lg text-left text-xs font-bold text-deepNavy/70">
+                                No brand links yet. Tap for category details.
+                              </button>
+                            `}
+                          </div>
+                        ` : ''}
+                      </section>
+                    `;
+                  }).join('') : `
+                    <button type="button" onclick="openMobileDetail('${safeCountryId}')" class="w-full px-3 py-3 bg-white border border-dashed border-slateLines rounded-lg text-left text-xs font-bold text-deepNavy/70">
+                      No visible categories yet. Tap for country details.
+                    </button>
+                  `}
+                </div>
+              ` : ''}
+            </article>
           `;
-        });
-
-        container.innerHTML = html;
+        }).join('');
       }
 
-      function toggleAccordion(id) {
-        const content = document.getElementById(`content-${id}`);
-        const arrow = document.getElementById(`arrow-${id}`);
-        if (content) {
-          const isHidden = content.classList.contains('hidden');
-          if (isHidden) {
-            content.classList.remove('hidden');
-            if (arrow) arrow.classList.add('rotate-180');
-          } else {
-            content.classList.add('hidden');
-            if (arrow) arrow.classList.remove('rotate-180');
-          }
+      function toggleMobileCountry(countryId) {
+        if (mobileSearchQuery) {
+          clearMobileSearch(false);
         }
+
+        if (mobileOpenCountryId === countryId) {
+          mobileOpenCountryId = null;
+          mobileOpenCategoryId = null;
+        } else {
+          mobileOpenCountryId = countryId;
+          mobileOpenCategoryId = null;
+        }
+
+        buildMobileAccordion();
+      }
+
+      function toggleMobileCategory(categoryId) {
+        if (mobileSearchQuery) {
+          clearMobileSearch(false);
+        }
+
+        mobileOpenCategoryId = mobileOpenCategoryId === categoryId ? null : categoryId;
+        buildMobileAccordion();
+      }
+
+      function collapseMobileCatalog() {
+        mobileOpenCountryId = null;
+        mobileOpenCategoryId = null;
+        clearMobileSearch(false);
+        buildMobileAccordion();
       }
 
       function openMobileDetail(nodeId) {
@@ -1871,39 +2039,19 @@
       }
 
       function handleMobileSearch(query) {
-        const val = query.trim().toLowerCase();
-        buildMobileAccordion(); // fresh rebuild
-
-        if (val.length === 0) return;
-
-        // Traverse mobile elements, auto expand open all nodes that match
-        catalogNodes().forEach(n => {
-          if (n.label.toLowerCase().includes(val) || (n.desc && n.desc.toLowerCase().includes(val)) || (n.website && n.website.toLowerCase().includes(val))) {
-            let parentId = n.parent;
-            while (parentId) {
-              const detail = document.getElementById(`details-m-acc-${parentId}`);
-              const pContent = document.getElementById(`content-m-acc-${parentId}`);
-              const pArrow = document.getElementById(`arrow-m-acc-${parentId}`);
-              if (detail) {
-                detail.open = true;
-              }
-              if (pContent) {
-                pContent.classList.remove('hidden');
-                if (pArrow) pArrow.classList.add('rotate-180');
-              }
-              const pNode = nodesById.get(parentId);
-              parentId = pNode ? pNode.parent : null;
-            }
-          }
-        });
+        mobileSearchQuery = normalizeMobileSearch(query);
+        mobileOpenCountryId = null;
+        mobileOpenCategoryId = null;
+        buildMobileAccordion();
       }
 
-      function clearMobileSearch() {
+      function clearMobileSearch(rebuild = true) {
         const input = document.getElementById('mobile-search');
         if (input) {
           input.value = '';
-          handleMobileSearch('');
         }
+        mobileSearchQuery = '';
+        if (rebuild) buildMobileAccordion();
       }
 
       // Contact Form Desk operations
