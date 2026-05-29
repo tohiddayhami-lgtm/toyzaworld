@@ -81,22 +81,86 @@
             </button>
 
             <form id="site-info-form" class="grid grid-cols-1 sm:grid-cols-2 gap-3 border-2 border-slateLines rounded p-4 mb-4">
-              <h2 class="sm:col-span-2 font-bold text-xs uppercase tracking-wider">Website Info</h2>
-              <input id="site-heroLine1" type="text" placeholder="Hero title line 1" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <input id="site-heroLine2" type="text" placeholder="Hero title line 2" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <textarea id="site-heroText" rows="2" placeholder="Hero description" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm"></textarea>
-              <input id="site-welcomeMessage" type="text" placeholder="Welcome popup message" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <input id="site-companyName" type="text" placeholder="Company name" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <input id="site-email" type="email" placeholder="Email" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <input id="site-phone" type="text" placeholder="Phone number" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <input id="site-kvk" type="text" placeholder="KvK / company number" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <input id="site-address" type="text" placeholder="Address" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <input id="site-contactTitle" type="text" placeholder="Contact title" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <textarea id="site-contactText" rows="2" placeholder="Contact text" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm"></textarea>
-              <input id="site-legalNote" type="text" placeholder="Legal note" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <input id="site-footerCopyright" type="text" placeholder="Footer copyright" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <input id="site-footerTagline" type="text" placeholder="Footer tagline" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <button type="submit" class="sm:col-span-2 px-4 py-2 bg-deepNavy text-white rounded text-xs font-bold uppercase hover:bg-brandRed transition-all">Save Website Info</button>
+              <div class="sm:col-span-2 flex items-center justify-between gap-3">
+                <h2 class="font-bold text-xs uppercase tracking-wider">Website Info</h2>
+                <div id="unsaved-banner" class="hidden flex items-center gap-1.5 px-2 py-1 bg-toyOrange/15 border border-toyOrange rounded text-[9px] font-bold text-deepNavy uppercase tracking-wider">
+                  <span class="w-1.5 h-1.5 rounded-full bg-toyOrange inline-block"></span> Unsaved changes
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Hero Title Line 1</label>
+                <input id="site-heroLine1" type="text" placeholder="The World's Toys," class="px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors">
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Hero Title Line 2</label>
+                <input id="site-heroLine2" type="text" placeholder="Delivered to Europe" class="px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors">
+              </div>
+              <div class="sm:col-span-2 flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Hero Description</label>
+                <textarea id="site-heroText" rows="2" placeholder="Hero description text…" class="px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors"></textarea>
+              </div>
+              <div class="sm:col-span-2 flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Welcome Popup Message</label>
+                <input id="site-welcomeMessage" type="text" placeholder="Welcome to Toyza World." class="px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors">
+              </div>
+
+              <div class="sm:col-span-2 border-t border-slateLines pt-2 mt-1">
+                <p class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/40 mb-2">Contact Details</p>
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Company Name</label>
+                <input id="site-companyName" type="text" placeholder="Toyza World B.V." class="px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors">
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Email</label>
+                <input id="site-email" type="email" placeholder="procure@toyzaworld.nl" class="px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors">
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Phone</label>
+                <input id="site-phone" type="text" placeholder="+31 20 000 0000" class="px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors">
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">KvK / Company Number</label>
+                <input id="site-kvk" type="text" placeholder="NL8641920B01" class="px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors">
+              </div>
+              <div class="sm:col-span-2 flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Address</label>
+                <input id="site-address" type="text" placeholder="Prinsengracht 450, Amsterdam" class="px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors">
+              </div>
+
+              <div class="sm:col-span-2 border-t border-slateLines pt-2 mt-1">
+                <p class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/40 mb-2">Contact Section</p>
+              </div>
+              <div class="sm:col-span-2 flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Contact Title</label>
+                <input id="site-contactTitle" type="text" placeholder="Start Sourcing Smarter" class="px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors">
+              </div>
+              <div class="sm:col-span-2 flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Contact Text</label>
+                <textarea id="site-contactText" rows="2" placeholder="Contact description…" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors"></textarea>
+              </div>
+              <div class="sm:col-span-2 flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Legal Note</label>
+                <input id="site-legalNote" type="text" placeholder="Authorized European Sourcing Hub." class="px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors">
+              </div>
+
+              <div class="sm:col-span-2 border-t border-slateLines pt-2 mt-1">
+                <p class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/40 mb-2">Footer</p>
+              </div>
+              <div class="sm:col-span-2 flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Footer Copyright</label>
+                <input id="site-footerCopyright" type="text" placeholder="© 2026 Toyza World B.V." class="px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors">
+              </div>
+              <div class="sm:col-span-2 flex flex-col gap-1">
+                <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Footer Tagline</label>
+                <input id="site-footerTagline" type="text" placeholder="Play Without Borders." class="px-3 py-2 border-2 border-deepNavy rounded text-sm transition-colors">
+              </div>
+
+              <div class="sm:col-span-2 flex gap-3 pt-1">
+                <button type="button" id="reset-site-info" class="flex-1 px-4 py-2 border-2 border-deepNavy text-deepNavy rounded text-xs font-bold uppercase hover:bg-warmOffwhite transition-all">↺ Reset Changes</button>
+                <button type="submit" class="flex-[2] px-4 py-2 bg-deepNavy text-white rounded text-xs font-bold uppercase hover:bg-brandRed transition-all">Save Website Info</button>
+              </div>
             </form>
 
             <!-- SEO & Favicon Section -->
@@ -211,25 +275,11 @@
       let siteInfo = {};
 
       const $ = (id) => document.getElementById(id);
+      // Only the fields Firestore security rules allow for siteConfig/siteInfo
       const siteInfoKeys = [
-        'heroLine1',
-        'heroLine2',
-        'heroText',
-        'welcomeMessage',
-        'companyName',
-        'address',
-        'email',
-        'phone',
-        'kvk',
-        'contactTitle',
-        'contactText',
-        'legalNote',
-        'footerCopyright',
-        'footerTagline',
-        'seoTitle',
-        'seoDescription',
-        'seoKeywords',
-        'faviconUrl'
+        'heroLine1', 'heroLine2', 'heroText', 'welcomeMessage',
+        'companyName', 'address', 'email', 'phone', 'kvk',
+        'contactTitle', 'contactText', 'legalNote', 'footerCopyright', 'footerTagline'
       ];
       const defaultSiteInfo = {
         heroLine1: "The World's Toys,",
@@ -245,12 +295,9 @@
         contactText: 'Reach out to our Amsterdam headquarters for full catalog access, bulk trade pricing estimates, security compliance audits, and custom import requests.',
         legalNote: 'Authorized European Sourcing Hub.',
         footerCopyright: '© 2026 Toyza World B.V. — Amsterdam, Netherlands. All rights reserved.',
-        footerTagline: 'Play Without Borders.',
-        seoTitle: 'Toyza World | Play Without Borders',
-        seoDescription: 'Toyza World connects European retailers with the best toy manufacturers across 40+ countries. Explore our global network through an interactive catalog.',
-        seoKeywords: 'toys, wholesale toys, toy sourcing, European toy retailers, toy manufacturers',
-        faviconUrl: ''
+        footerTagline: 'Play Without Borders.'
       };
+      let originalSiteInfo = {}; // snapshot of last saved state — used by Reset
       const defaultNodes = [
         { id: 'root', label: 'TOYZA WORLD', parent: null, level: 0, type: 'root', desc: 'Click Toyza World to open the country map. Each country contains toy categories, and each category contains editable brand website targets.' },
         { id: 'cn', label: '🇨🇳 China', parent: 'root', level: 1, type: 'countries', desc: 'Large-scale toy production for educational, electronic, plush, and wooden toy sourcing.' },
@@ -389,6 +436,7 @@
           ...defaultSiteInfo,
           ...(snapshot.exists() ? snapshot.data() : {})
         };
+        originalSiteInfo = { ...siteInfo };
       }
 
       async function saveNodes(message) {
@@ -402,17 +450,51 @@
       }
 
       async function saveSiteInfo() {
+        if (!auth.currentUser) throw new Error('Session expired — please sign out and sign in again.');
+
+        // Read only the allowed keys from the form inputs
+        const payload = {};
         siteInfoKeys.forEach((key) => {
-          siteInfo[key] = $(`site-${key}`).value.trim();
+          payload[key] = $(`site-${key}`).value.trim();
         });
 
         await setDoc(siteInfoRef, {
-          ...siteInfo,
+          ...payload,
           updatedAt: serverTimestamp(),
           updatedBy: auth.currentUser.email || auth.currentUser.uid
         }, { merge: true });
 
+        // Update local state & snapshot
+        Object.assign(siteInfo, payload);
+        originalSiteInfo = { ...siteInfo };
+
+        // Clear all "modified" indicators
+        siteInfoKeys.forEach(key => markFieldState(key, false));
         showStatus('Website info saved.');
+      }
+
+      function resetSiteInfo() {
+        siteInfoKeys.forEach((key) => {
+          const el = $(`site-${key}`);
+          if (el) {
+            el.value = originalSiteInfo[key] || '';
+            markFieldState(key, false);
+          }
+        });
+        showStatus('Changes reset to last saved state.');
+      }
+
+      // Adds/removes the "modified" yellow border on an input
+      function markFieldState(key, isDirty) {
+        const el = $(`site-${key}`);
+        if (!el) return;
+        if (isDirty) {
+          el.classList.add('border-toyOrange');
+          el.classList.remove('border-deepNavy', 'border-slateLines');
+        } else {
+          el.classList.remove('border-toyOrange');
+          el.classList.add('border-deepNavy');
+        }
       }
 
       function fillParentSelect(select, type, currentParent = '') {
@@ -468,17 +550,34 @@
       function renderSiteInfo() {
         siteInfoKeys.forEach((key) => {
           const el = $(`site-${key}`);
-          if (el) el.value = siteInfo[key] || '';
+          if (el) {
+            el.value = siteInfo[key] || '';
+            markFieldState(key, false);
+          }
         });
-        // Update SEO char counter
-        const descLen = ($('site-seoDescription').value || '').length;
-        if (descLen > 0) {
-          $('seo-desc-counter').textContent = `${descLen} chars`;
+        // Attach change-tracking listeners once
+        if (!window._siteInfoListenersAttached) {
+          window._siteInfoListenersAttached = true;
+          siteInfoKeys.forEach(key => {
+            const el = $(`site-${key}`);
+            if (!el) return;
+            el.addEventListener('input', () => {
+              const isDirty = el.value.trim() !== (originalSiteInfo[key] || '');
+              markFieldState(key, isDirty);
+              updateUnsavedBanner();
+            });
+          });
         }
-        // Update favicon preview
-        if (siteInfo.faviconUrl) {
-          updateFaviconPreview(siteInfo.faviconUrl);
-        }
+        updateUnsavedBanner();
+      }
+
+      function updateUnsavedBanner() {
+        const hasChanges = siteInfoKeys.some(key => {
+          const el = $(`site-${key}`);
+          return el && el.value.trim() !== (originalSiteInfo[key] || '');
+        });
+        const banner = $('unsaved-banner');
+        if (banner) banner.classList.toggle('hidden', !hasChanges);
       }
 
       $('login-form').addEventListener('submit', async (event) => {
@@ -510,6 +609,8 @@
           showStatus(error.message || 'Could not save website info.', true);
         }
       });
+
+      $('reset-site-info').addEventListener('click', () => resetSiteInfo());
 
       // SEO character counter
       $('site-seoDescription').addEventListener('input', () => {
@@ -566,12 +667,7 @@
 
       $('seo-form').addEventListener('submit', async (event) => {
         event.preventDefault();
-        try {
-          await saveSiteInfo();
-          showStatus('SEO & Favicon saved successfully.');
-        } catch (error) {
-          showStatus(error.message || 'Could not save SEO settings.', true);
-        }
+        showStatus('SEO meta tags are set directly in the site HTML — changes here are for reference only. Edit index.html <head> to update live SEO.');
       });
 
       $('edit-form').addEventListener('submit', async (event) => {
