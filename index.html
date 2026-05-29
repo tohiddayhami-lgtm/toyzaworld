@@ -56,7 +56,6 @@
       const firebaseAuth = getAuth(firebaseApp);
       const firebaseDb = getFirestore(firebaseApp);
       const toyMapConfigRef = doc(firebaseDb, 'siteConfig', 'toyMap');
-      const siteInfoConfigRef = doc(firebaseDb, 'siteConfig', 'siteInfo');
 
       isSupported()
         .then((supported) => {
@@ -136,8 +135,11 @@
 
       window.loadToyzaSiteInfo = async function () {
         try {
-          const snapshot = await getDoc(siteInfoConfigRef);
-          return snapshot.exists() ? snapshot.data() : null;
+          const snapshot = await getDoc(toyMapConfigRef);
+          if (!snapshot.exists()) return null;
+
+          const data = snapshot.data();
+          return data.siteInfo || null;
         } catch (error) {
           console.warn('Toyza site info could not be loaded from Firestore.', error);
           return null;
