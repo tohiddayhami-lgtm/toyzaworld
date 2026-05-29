@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Toyza World | Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23FAFAF7'/%3E%3Crect x='2' y='2' width='13' height='13' rx='2' fill='%23E63946'/%3E%3Crect x='17' y='2' width='13' height='13' rx='2' fill='%23457B9D'/%3E%3Crect x='2' y='17' width='13' height='13' rx='2' fill='%23F4A261'/%3E%3Crect x='17' y='17' width='13' height='13' rx='2' fill='%231D3557'/%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Fraunces:wght@700;900&display=swap" rel="stylesheet">
@@ -566,27 +567,7 @@
       $('seo-form').addEventListener('submit', async (event) => {
         event.preventDefault();
         try {
-          const seoTitle = $('site-seoTitle').value.trim();
-          const seoDescription = $('site-seoDescription').value.trim();
-          const seoKeywords = $('site-seoKeywords').value.trim();
-          const faviconUrl = $('site-faviconUrl').value.trim();
-
-          // Save only SEO fields using merge — avoids rewriting large siteInfo
-          await setDoc(siteInfoRef, {
-            seoTitle,
-            seoDescription,
-            seoKeywords,
-            faviconUrl,
-            updatedAt: serverTimestamp(),
-            updatedBy: auth.currentUser.email || auth.currentUser.uid
-          }, { merge: true });
-
-          // Keep local state in sync
-          siteInfo.seoTitle = seoTitle;
-          siteInfo.seoDescription = seoDescription;
-          siteInfo.seoKeywords = seoKeywords;
-          siteInfo.faviconUrl = faviconUrl;
-
+          await saveSiteInfo();
           showStatus('SEO & Favicon saved successfully.');
         } catch (error) {
           showStatus(error.message || 'Could not save SEO settings.', true);
