@@ -270,11 +270,12 @@
       const auth = getAuth(app);
       const db = getFirestore(app);
       const mapRef = doc(db, 'siteConfig', 'toyMap');
+      const siteInfoRef = doc(db, 'siteConfig', 'siteInfo');
       let nodes = [];
       let siteInfo = {};
 
       const $ = (id) => document.getElementById(id);
-      // Only the fields Firestore security rules allow for siteConfig/siteInfo
+      // Only the fields Firestore security rules allow for siteConfig/siteInfo.
       const siteInfoKeys = [
         'heroLine1', 'heroLine2', 'heroText', 'welcomeMessage',
         'companyName', 'address', 'email', 'phone', 'kvk',
@@ -430,11 +431,17 @@
       }
 
       async function loadSiteInfo() {
-        const snapshot = await getDoc(mapRef);
-        const data = snapshot.exists() ? snapshot.data() : {};
+        const snapshot = await getDoc(siteInfoRef);
+        let data = snapshot.exists() ? snapshot.data() : {};
+
+        if (!snapshot.exists()) {
+          const legacySnapshot = await getDoc(mapRef);
+          data = legacySnapshot.exists() ? (legacySnapshot.data().siteInfo || {}) : {};
+        }
+
         siteInfo = {
           ...defaultSiteInfo,
-          ...(data.siteInfo || {})
+          ...data
         };
         originalSiteInfo = { ...siteInfo };
       }
@@ -458,10 +465,10 @@
           payload[key] = $(`site-${key}`).value.trim();
         });
 
-        await setDoc(mapRef, {
-          siteInfo: payload,
-          siteInfoUpdatedAt: serverTimestamp(),
-          siteInfoUpdatedBy: auth.currentUser.email || auth.currentUser.uid
+        await setDoc(siteInfoRef, {
+          ...payload,
+          updatedAt: serverTimestamp(),
+          updatedBy: auth.currentUser.email || auth.currentUser.uid
         }, { merge: true });
 
         // Update local state & snapshot
