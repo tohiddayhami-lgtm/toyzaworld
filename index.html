@@ -830,6 +830,9 @@
         { id: 'vn_wood_janod', label: 'Janod', parent: 'vn_wood', level: 3, type: 'brands', desc: 'Wooden toys, puzzles, and design-led early learning collections.', website: 'https://www.janod.com', brand: true }
       ];
 
+      // O(1) lookup map — rebuilt whenever NODES changes
+      let nodesById = new Map(NODES.map(n => [n.id, n]));
+
       // Panning and zoom state variables
       let currentPanX = 0;
       let currentPanY = 0;
@@ -874,7 +877,7 @@
 
         let parentId = node.parent;
         while (parentId) {
-          const parent = NODES.find(n => n.id === parentId);
+          const parent = nodesById.get(parentId);
           if (!parent || parent.hidden || parent.deleted) return false;
           parentId = parent.parent;
         }
@@ -905,6 +908,7 @@
         if (!Array.isArray(nodes) || nodes.length === 0) return;
         NODES.splice(0, NODES.length, ...nodes);
         NODES.forEach(n => initializeNodeState(n));
+        nodesById = new Map(NODES.map(n => [n.id, n]));
       }
 
       function mergeMapNodes(defaultNodes, savedNodes) {
@@ -963,7 +967,7 @@
       function assignPositions() {
         const visibleNodes = catalogNodes();
         // 1. Root Node Center
-        const root = NODES.find(n => n.id === 'root');
+        const root = nodesById.get('root');
         root.targetX = 0;
         root.targetY = 0;
         root.angle = 0;
@@ -1108,7 +1112,7 @@
         const parts = [];
         let curr = node;
         while (curr.parent !== null) {
-          const parent = NODES.find(n => n.id === curr.parent);
+          const parent = nodesById.get(curr.parent);
           if (!parent) break;
           if (parent.id !== 'root') {
             parts.unshift(parent.label);
@@ -1122,7 +1126,7 @@
       // Interactions
       function handleNodeMouseEnter(nodeId) {
         hoveredNodeId = nodeId;
-        const node = NODES.find(n => n.id === nodeId);
+        const node = nodesById.get(nodeId);
         if (!node) return;
         
         const tooltip = document.getElementById('map-tooltip');
@@ -1147,7 +1151,7 @@
         if (isDragMovement) return;
         event.stopPropagation();
         
-        const node = NODES.find(n => n.id === nodeId);
+        const node = nodesById.get(nodeId);
         if (!node) return;
 
         const children = catalogNodes().filter(n => n.parent === node.id);
@@ -1155,6 +1159,7 @@
 
         if (hasChildren) {
           node.expanded = !node.expanded;
+          resumeAnimation();
           // Toggle child expansion recursively if needed, but standard is step-by-step click
         }
 
@@ -1313,12 +1318,12 @@
       }
 
       function updateNodeLevelFromParent(node) {
-        const parent = NODES.find(n => n.id === node.parent);
+        const parent = nodesById.get(node.parent);
         node.level = parent ? parent.level + 1 : 1;
       }
 
       function markDeletedWithDescendants(nodeId) {
-        const node = NODES.find(n => n.id === nodeId);
+        const node = nodesById.get(nodeId);
         if (!node) return;
 
         node.deleted = true;
@@ -1372,7 +1377,7 @@
         const select = document.getElementById('admin-node-select');
         if (!select) return;
 
-        const node = NODES.find(n => n.id === select.value);
+        const node = nodesById.get(select.value);
         if (!node) return;
 
         document.getElementById('admin-node-label').value = node.label || '';
@@ -1415,7 +1420,7 @@
           event.preventDefault();
 
           try {
-            const node = NODES.find(n => n.id === select.value);
+            const node = nodesById.get(select.value);
             if (!node) return;
 
             const nextLabel = sanitizePlainText(document.getElementById('admin-node-label').value);
@@ -1478,6 +1483,7 @@
             updateNodeLevelFromParent(newNode);
             initializeNodeState(newNode);
             NODES.push(newNode);
+            nodesById.set(newNode.id, newNode);
             addForm.reset();
             refreshAdminParentOptions(document.getElementById('admin-new-type').value, document.getElementById('admin-new-parent'));
             await saveAdminMapChange('New map item added and saved to Firebase.');
@@ -1487,7 +1493,7 @@
         });
 
         deleteButton?.addEventListener('click', async () => {
-          const node = NODES.find(n => n.id === select.value);
+          const node = nodesById.get(select.value);
           if (!node) return;
 
           try {
@@ -1527,22 +1533,30 @@
       }
 
       // Search functionality
+      let _searchDebounceTimer = null;
       function handleSearchChange() {
+        clearTimeout(_searchDebounceTimer);
+        _searchDebounceTimer = setTimeout(_applySearch, 150);
+      }
+
+      function _applySearch() {
         const val = document.getElementById('search-input').value.trim().toLowerCase();
         const counter = document.getElementById('search-counter');
 
-        catalogNodes().forEach(n => {
+        const visible = catalogNodes();
+        visible.forEach(n => {
           n.matched = false;
           n.hasMatchedDescendant = false;
         });
 
         if (val.length === 0) {
           counter.classList.add('hidden');
+          resumeAnimation();
           return;
         }
 
         let matchCount = 0;
-        catalogNodes().forEach(n => {
+        visible.forEach(n => {
           const matchLabel = n.label.toLowerCase().includes(val);
           const matchDesc = n.desc && n.desc.toLowerCase().includes(val);
           const matchWebsite = n.website && n.website.toLowerCase().includes(val);
@@ -1550,10 +1564,10 @@
             n.matched = true;
             matchCount++;
 
-            // Recursively force-expand parent ancestors to expose match in layout!
+            // Recursively force-expand parent ancestors to expose match in layout
             let parentId = n.parent;
             while (parentId) {
-              const parentNode = NODES.find(p => p.id === parentId);
+              const parentNode = nodesById.get(parentId);
               if (parentNode) {
                 parentNode.expanded = true;
                 parentNode.hasMatchedDescendant = true;
@@ -1567,6 +1581,7 @@
 
         counter.innerText = `${matchCount} supply node${matchCount === 1 ? '' : 's'} discovered`;
         counter.classList.remove('hidden');
+        resumeAnimation();
       }
 
       function clearSearch() {
@@ -1611,6 +1626,7 @@
 
           panX = targetPanX;
           panY = targetPanY;
+          resumeAnimation();
         });
 
         window.addEventListener('mouseup', () => {
@@ -1641,6 +1657,7 @@
           targetPanY = currentY;
           panX = targetPanX;
           panY = targetPanY;
+          resumeAnimation();
         }, { passive: true });
 
         window.addEventListener('touchend', () => {
@@ -1661,6 +1678,7 @@
 
           targetZoom = Math.min(Math.max(nextZoom, 0.45), 2.5);
           updateZoomSlider();
+          resumeAnimation();
         }, { passive: false });
       }
 
@@ -1670,15 +1688,12 @@
           const container = document.getElementById('map-canvas-container');
           targetPanX = container.clientWidth / 2;
           targetPanY = container.clientHeight / 3;
-          
-          // Collapse all and wait for the user to click Toyza World again.
-          NODES.forEach(n => {
-            n.expanded = false;
-          });
+          NODES.forEach(n => { n.expanded = false; });
         } else {
           targetZoom = Math.min(Math.max(targetZoom * factor, 0.5), 2.5);
         }
         updateZoomSlider();
+        resumeAnimation();
       }
 
       function updateZoomSlider() {
@@ -1691,6 +1706,7 @@
       function handleZoomSliderChange(val) {
         targetZoom = parseFloat(val);
         updateZoomSlider();
+        resumeAnimation();
       }
 
       // Draw curves dynamically on SVG
@@ -1701,7 +1717,7 @@
         let pathHTML = '';
         catalogNodes().forEach(node => {
           if (node.id === 'root') return;
-          const parent = NODES.find(n => n.id === node.parent);
+          const parent = nodesById.get(node.parent);
           if (!parent) return;
 
           // Process connection only if descendant opacity is slightly visible
@@ -1824,7 +1840,7 @@
       }
 
       function openMobileDetail(nodeId) {
-        const node = NODES.find(n => n.id === nodeId);
+        const node = nodesById.get(nodeId);
         if (node) {
           openSidePanel(node);
         }
@@ -1851,7 +1867,7 @@
                 pContent.classList.remove('hidden');
                 if (pArrow) pArrow.classList.add('rotate-180');
               }
-              const pNode = NODES.find(p => p.id === parentId);
+              const pNode = nodesById.get(parentId);
               parentId = pNode ? pNode.parent : null;
             }
           }
@@ -1889,43 +1905,57 @@
         }
       }
 
-      // Smooth Animation Render tick loop (60fps)
+      // Animation loop — only runs while something is animating
+      let _rafActive = false;
+      function resumeAnimation() {
+        if (!_rafActive) {
+          _rafActive = true;
+          requestAnimationFrame(tick);
+        }
+      }
+
       function tick() {
-        // Recalculate zoom and target pans smoothly (exponential integration)
-        currentPanX += (targetPanX - currentPanX) * 0.15;
-        currentPanY += (targetPanY - currentPanY) * 0.15;
-        currentZoom += (targetZoom - currentZoom) * 0.15;
+        let stillAnimating = false;
+
+        // Smooth pan & zoom
+        const dpX = targetPanX - currentPanX;
+        const dpY = targetPanY - currentPanY;
+        const dz  = targetZoom - currentZoom;
+        if (Math.abs(dpX) > 0.05 || Math.abs(dpY) > 0.05 || Math.abs(dz) > 0.001) stillAnimating = true;
+        currentPanX += dpX * 0.15;
+        currentPanY += dpY * 0.15;
+        currentZoom += dz  * 0.15;
 
         const viewport = document.getElementById('map-viewport');
         if (viewport) {
           viewport.style.transform = `translate(${currentPanX}px, ${currentPanY}px) scale(${currentZoom})`;
         }
 
+        // Cache search term once per frame — avoids 47× DOM reads
+        const searchEl = document.getElementById('search-input');
+        const term = searchEl ? searchEl.value.trim().toLowerCase() : '';
+        const hasSearch = term.length > 0;
+
         NODES.forEach(node => {
           let visible = isCatalogVisible(node);
           let curr = node;
-          
-          // Climb ancestry tree. If any parent layout collapsed, node must snap-hide
+
+          // Climb ancestry — collapse if any parent is not expanded
           while (curr.parent !== null) {
-            const parent = NODES.find(n => n.id === curr.parent);
-            if (!parent || !parent.expanded) {
-              visible = false;
-              break;
-            }
+            const parent = nodesById.get(curr.parent);
+            if (!parent || !parent.expanded) { visible = false; break; }
             curr = parent;
           }
 
           let tX, tY, tScale, tOpacity;
-          
+
           if (visible) {
             tX = node.targetX;
             tY = node.targetY;
             tScale = 1.0;
             tOpacity = 1.0;
 
-            // Handle Active searching dim modifiers
-            const term = document.getElementById('search-input')?.value.trim().toLowerCase();
-            if (term && term.length > 0) {
+            if (hasSearch) {
               if (node.matched || node.hasMatchedDescendant) {
                 tOpacity = 1.0;
                 tScale = node.matched ? 1.15 : 1.0;
@@ -1935,25 +1965,31 @@
               }
             }
           } else {
-            // Unvisible nodes: snap transition towards closest visible parent
-            let ancestor = NODES.find(n => n.id === node.parent);
+            // Collapse towards nearest visible ancestor
+            let ancestor = nodesById.get(node.parent);
             while (ancestor && ancestor.parent !== null) {
               let ancVisible = true;
               let pt = ancestor;
               while (pt.parent !== null) {
-                const par = NODES.find(p => p.id === pt.parent);
+                const par = nodesById.get(pt.parent);
                 if (!par || !par.expanded) { ancVisible = false; break; }
                 pt = par;
               }
               if (ancVisible) break;
-              ancestor = NODES.find(n => n.id === ancestor.parent);
+              ancestor = nodesById.get(ancestor.parent);
             }
 
-            const anchor = ancestor || NODES.find(n => n.id === 'root');
+            const anchor = ancestor || nodesById.get('root');
             tX = anchor.currentX;
             tY = anchor.currentY;
             tScale = 0.0;
             tOpacity = 0.0;
+          }
+
+          // Check if still moving
+          if (Math.abs(node.currentX - tX) > 0.05 || Math.abs(node.currentY - tY) > 0.05 ||
+              Math.abs(node.currentScale - tScale) > 0.002 || Math.abs(node.currentOpacity - tOpacity) > 0.002) {
+            stillAnimating = true;
           }
 
           // Interpolate
@@ -1968,7 +2004,7 @@
             el.style.opacity = node.currentOpacity;
             el.style.pointerEvents = node.currentOpacity > 0.12 ? 'auto' : 'none';
 
-            if (node.matched && document.getElementById('search-input')?.value.trim().length > 0) {
+            if (node.matched && hasSearch) {
               el.classList.add('search-match-highlight');
             } else {
               el.classList.remove('search-match-highlight');
@@ -1977,7 +2013,12 @@
         });
 
         drawSVGPaths();
-        requestAnimationFrame(tick);
+
+        if (stillAnimating) {
+          requestAnimationFrame(tick);
+        } else {
+          _rafActive = false;
+        }
       }
 
       // Initial Bootstrap Sourcing Dashboard
@@ -1992,7 +2033,7 @@
         createDOMNodes();
         buildMobileAccordion();
         setupDragAndZoom();
-        requestAnimationFrame(tick);
+        resumeAnimation();
 
         showToast(siteInfo?.welcomeMessage || "Welcome to Toyza World.");
       });
@@ -2001,9 +2042,9 @@
       window.addEventListener('resize', () => {
         const container = document.getElementById('map-canvas-container');
         if (container && !isDragging) {
-          // Keep centered on window scales
           targetPanX = container.clientWidth / 2;
           targetPanY = container.clientHeight / 3;
+          resumeAnimation();
         }
       });
     </script>

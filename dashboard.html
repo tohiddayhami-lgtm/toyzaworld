@@ -100,7 +100,15 @@
 
             <form id="edit-form" class="grid grid-cols-1 sm:grid-cols-2 gap-3 border-2 border-slateLines rounded p-4 mb-4">
               <h2 class="sm:col-span-2 font-bold text-xs uppercase tracking-wider">Edit Existing Item</h2>
-              <select id="node-select" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm"></select>
+              <div class="sm:col-span-2 flex gap-2">
+                <select id="node-type-filter" class="px-3 py-2 border-2 border-deepNavy rounded text-sm bg-warmOffwhite font-bold">
+                  <option value="">All Types</option>
+                  <option value="countries">Countries</option>
+                  <option value="categories">Categories</option>
+                  <option value="brands">Brands</option>
+                </select>
+                <select id="node-select" class="flex-1 px-3 py-2 border-2 border-deepNavy rounded text-sm"></select>
+              </div>
               <input id="node-label" required type="text" placeholder="Name" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
               <select id="node-parent" class="px-3 py-2 border-2 border-deepNavy rounded text-sm"></select>
               <textarea id="node-desc" rows="2" placeholder="Description" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm"></textarea>
@@ -369,19 +377,37 @@
         fillParentSelect($('node-parent'), node.type, node.parent);
       }
 
+      function renderNodeSelect() {
+        const typeFilter = $('node-type-filter').value;
+        const editable = nodes.filter((node) => node.id !== 'root' && (typeFilter === '' || node.type === typeFilter));
+        const previous = $('node-select').value;
+
+        if (typeFilter === '') {
+          const groups = { countries: [], categories: [], brands: [] };
+          editable.forEach((node) => { if (groups[node.type]) groups[node.type].push(node); });
+          $('node-select').innerHTML = Object.entries(groups).map(([type, list]) =>
+            list.length === 0 ? '' :
+            `<optgroup label="${type.charAt(0).toUpperCase() + type.slice(1)} (${list.length})">${
+              list.map((node) => `<option value="${node.id}" ${node.id === previous ? 'selected' : ''}>${node.label}${node.hidden ? ' ★hidden' : ''}${node.deleted ? ' ✗deleted' : ''}</option>`).join('')
+            }</optgroup>`
+          ).join('');
+        } else {
+          $('node-select').innerHTML = editable.map((node) => (
+            `<option value="${node.id}" ${node.id === previous ? 'selected' : ''}>${node.label}${node.hidden ? ' ★hidden' : ''}${node.deleted ? ' ✗deleted' : ''}</option>`
+          )).join('');
+        }
+
+        if (!$('node-select').value && editable[0]) $('node-select').value = editable[0].id;
+        syncSelectedNode();
+      }
+
       function render() {
         const visible = nodes.filter(isVisible);
         $('country-count').textContent = visible.filter((node) => node.parent === 'root').length;
         $('category-count').textContent = visible.filter((node) => node.type === 'categories').length;
         $('brand-count').textContent = visible.filter((node) => node.type === 'brands' && node.brand).length;
 
-        const editable = nodes.filter((node) => node.id !== 'root');
-        const previous = $('node-select').value;
-        $('node-select').innerHTML = editable.map((node) => (
-          `<option value="${node.id}" ${node.id === previous ? 'selected' : ''}>${node.type}: ${node.label}${node.hidden ? ' (hidden)' : ''}${node.deleted ? ' (deleted)' : ''}</option>`
-        )).join('');
-        if (!$('node-select').value && editable[0]) $('node-select').value = editable[0].id;
-        syncSelectedNode();
+        renderNodeSelect();
         fillParentSelect($('new-parent'), $('new-type').value);
       }
 
@@ -405,6 +431,7 @@
 
       $('signout').addEventListener('click', () => signOut(auth));
       $('node-select').addEventListener('change', syncSelectedNode);
+      $('node-type-filter').addEventListener('change', renderNodeSelect);
       $('new-type').addEventListener('change', () => fillParentSelect($('new-parent'), $('new-type').value));
       $('restore-default-map').addEventListener('click', async () => {
         nodes = defaultNodes.map((node) => ({ ...node }));
