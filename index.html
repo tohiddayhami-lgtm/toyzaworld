@@ -3,7 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Toyza World | Play Without Borders</title>
+    <title id="site-page-title">Toyza World | Play Without Borders</title>
+    <meta id="site-meta-description" name="description" content="Toyza World connects European retailers with the best toy manufacturers across 40+ countries.">
+    <meta id="site-meta-keywords" name="keywords" content="toys, wholesale toys, toy sourcing, European toy retailers, toy manufacturers">
+    <meta id="site-og-title" property="og:title" content="Toyza World | Play Without Borders">
+    <meta id="site-og-description" property="og:description" content="Toyza World connects European retailers with the best toy manufacturers across 40+ countries.">
+    <link id="site-favicon" rel="icon" type="image/png" href="">
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -955,12 +960,36 @@
       function applySiteInfo(siteInfo) {
         if (!siteInfo) return;
 
+        // Update visible text nodes
         Object.entries(siteInfo).forEach(([key, value]) => {
           const target = document.querySelector(`[data-site-key="${key}"]`);
           if (target && typeof value === 'string') {
             target.innerText = value;
           }
         });
+
+        // SEO: page title
+        if (siteInfo.seoTitle) {
+          document.getElementById('site-page-title').textContent = siteInfo.seoTitle;
+          document.getElementById('site-og-title').content = siteInfo.seoTitle;
+        }
+        // SEO: meta description
+        if (siteInfo.seoDescription) {
+          document.getElementById('site-meta-description').content = siteInfo.seoDescription;
+          document.getElementById('site-og-description').content = siteInfo.seoDescription;
+        }
+        // SEO: meta keywords
+        if (siteInfo.seoKeywords) {
+          document.getElementById('site-meta-keywords').content = siteInfo.seoKeywords;
+        }
+        // Favicon URL
+        if (siteInfo.faviconUrl) {
+          const link = document.getElementById('site-favicon');
+          link.href = siteInfo.faviconUrl;
+          link.type = siteInfo.faviconUrl.startsWith('data:image/svg') ? 'image/svg+xml'
+                    : siteInfo.faviconUrl.endsWith('.ico')             ? 'image/x-icon'
+                    : 'image/png';
+        }
       }
 
       // Layout assignment math

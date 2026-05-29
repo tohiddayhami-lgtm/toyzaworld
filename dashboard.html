@@ -98,6 +98,51 @@
               <button type="submit" class="sm:col-span-2 px-4 py-2 bg-deepNavy text-white rounded text-xs font-bold uppercase hover:bg-brandRed transition-all">Save Website Info</button>
             </form>
 
+            <!-- SEO & Favicon Section -->
+            <form id="seo-form" class="grid grid-cols-1 gap-3 border-2 border-slateLines rounded p-4 mb-4">
+              <div class="flex items-center gap-2">
+                <span class="text-base">🔍</span>
+                <h2 class="font-bold text-xs uppercase tracking-wider">SEO & Favicon</h2>
+              </div>
+
+              <div class="grid grid-cols-1 gap-1">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-deepNavy/60">Page Title (tab & Google)</label>
+                <input id="site-seoTitle" type="text" placeholder="Toyza World | Play Without Borders" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+                <p class="text-[9px] text-deepNavy/40">Ideal length: 50–60 characters</p>
+              </div>
+
+              <div class="grid grid-cols-1 gap-1">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-deepNavy/60">Meta Description (Google snippet)</label>
+                <textarea id="site-seoDescription" rows="3" placeholder="Toyza World connects European retailers with the best toy manufacturers across 40+ countries…" class="px-3 py-2 border-2 border-deepNavy rounded text-sm resize-none"></textarea>
+                <p class="text-[9px] text-deepNavy/40 flex justify-between"><span>Ideal length: 150–160 characters</span><span id="seo-desc-counter" class="font-bold text-deepNavy/60">0 chars</span></p>
+              </div>
+
+              <div class="grid grid-cols-1 gap-1">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-deepNavy/60">Keywords (comma separated)</label>
+                <input id="site-seoKeywords" type="text" placeholder="toys, wholesale toys, toy sourcing, European retailers" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+              </div>
+
+              <div class="grid grid-cols-1 gap-1">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-deepNavy/60">Favicon</label>
+                <div class="flex items-center gap-3">
+                  <div id="favicon-preview" class="w-10 h-10 border-2 border-slateLines rounded flex items-center justify-center text-deepNavy/30 text-lg bg-warmOffwhite overflow-hidden flex-shrink-0">
+                    <span id="favicon-placeholder">🌐</span>
+                    <img id="favicon-img" class="hidden w-full h-full object-contain" alt="favicon">
+                  </div>
+                  <div class="flex-1 flex flex-col gap-1.5">
+                    <label class="relative cursor-pointer">
+                      <span class="px-3 py-1.5 bg-deepNavy text-white text-[10px] font-bold uppercase rounded inline-block hover:bg-brandRed transition-all">Upload Image</span>
+                      <input id="favicon-file" type="file" accept="image/png,image/jpeg,image/svg+xml,image/x-icon,image/webp" class="absolute inset-0 opacity-0 cursor-pointer w-0">
+                    </label>
+                    <span class="text-[9px] text-deepNavy/40">or paste URL below</span>
+                    <input id="site-faviconUrl" type="text" placeholder="https://example.com/favicon.png" class="px-3 py-1.5 border-2 border-slateLines focus:border-deepNavy rounded text-xs">
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="px-4 py-2 bg-deepNavy text-white rounded text-xs font-bold uppercase hover:bg-brandRed transition-all">Save SEO & Favicon</button>
+            </form>
+
             <form id="edit-form" class="grid grid-cols-1 sm:grid-cols-2 gap-3 border-2 border-slateLines rounded p-4 mb-4">
               <h2 class="sm:col-span-2 font-bold text-xs uppercase tracking-wider">Edit Existing Item</h2>
               <div class="sm:col-span-2 flex gap-2">
@@ -179,7 +224,11 @@
         'contactText',
         'legalNote',
         'footerCopyright',
-        'footerTagline'
+        'footerTagline',
+        'seoTitle',
+        'seoDescription',
+        'seoKeywords',
+        'faviconUrl'
       ];
       const defaultSiteInfo = {
         heroLine1: "The World's Toys,",
@@ -195,7 +244,11 @@
         contactText: 'Reach out to our Amsterdam headquarters for full catalog access, bulk trade pricing estimates, security compliance audits, and custom import requests.',
         legalNote: 'Authorized European Sourcing Hub.',
         footerCopyright: '© 2026 Toyza World B.V. — Amsterdam, Netherlands. All rights reserved.',
-        footerTagline: 'Play Without Borders.'
+        footerTagline: 'Play Without Borders.',
+        seoTitle: 'Toyza World | Play Without Borders',
+        seoDescription: 'Toyza World connects European retailers with the best toy manufacturers across 40+ countries. Explore our global network through an interactive catalog.',
+        seoKeywords: 'toys, wholesale toys, toy sourcing, European toy retailers, toy manufacturers',
+        faviconUrl: ''
       };
       const defaultNodes = [
         { id: 'root', label: 'TOYZA WORLD', parent: null, level: 0, type: 'root', desc: 'Click Toyza World to open the country map. Each country contains toy categories, and each category contains editable brand website targets.' },
@@ -413,8 +466,18 @@
 
       function renderSiteInfo() {
         siteInfoKeys.forEach((key) => {
-          $(`site-${key}`).value = siteInfo[key] || '';
+          const el = $(`site-${key}`);
+          if (el) el.value = siteInfo[key] || '';
         });
+        // Update SEO char counter
+        const descLen = ($('site-seoDescription').value || '').length;
+        if (descLen > 0) {
+          $('seo-desc-counter').textContent = `${descLen} chars`;
+        }
+        // Update favicon preview
+        if (siteInfo.faviconUrl) {
+          updateFaviconPreview(siteInfo.faviconUrl);
+        }
       }
 
       $('login-form').addEventListener('submit', async (event) => {
@@ -444,6 +507,69 @@
           await saveSiteInfo();
         } catch (error) {
           showStatus(error.message || 'Could not save website info.', true);
+        }
+      });
+
+      // SEO character counter
+      $('site-seoDescription').addEventListener('input', () => {
+        const len = $('site-seoDescription').value.length;
+        const counter = $('seo-desc-counter');
+        counter.textContent = `${len} chars`;
+        counter.className = len > 160 ? 'font-bold text-brandRed' : len >= 150 ? 'font-bold text-green-600' : 'font-bold text-deepNavy/60';
+      });
+
+      // Favicon file upload → base64
+      $('favicon-file').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 512 * 1024) {
+          showStatus('Image too large — please use an image under 512 KB.', true);
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target.result;
+          $('site-faviconUrl').value = dataUrl;
+          updateFaviconPreview(dataUrl);
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // Favicon URL live preview
+      $('site-faviconUrl').addEventListener('input', () => {
+        updateFaviconPreview($('site-faviconUrl').value.trim());
+      });
+
+      function updateFaviconPreview(src) {
+        const img = $('favicon-img');
+        const placeholder = $('favicon-placeholder');
+        if (!src) {
+          img.classList.add('hidden');
+          placeholder.classList.remove('hidden');
+          return;
+        }
+        img.src = src;
+        img.onload = () => { img.classList.remove('hidden'); placeholder.classList.add('hidden'); };
+        img.onerror = () => { img.classList.add('hidden'); placeholder.classList.remove('hidden'); };
+      }
+
+      $('seo-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        try {
+          siteInfo.seoTitle = $('site-seoTitle').value.trim();
+          siteInfo.seoDescription = $('site-seoDescription').value.trim();
+          siteInfo.seoKeywords = $('site-seoKeywords').value.trim();
+          siteInfo.faviconUrl = $('site-faviconUrl').value.trim();
+
+          await setDoc(siteInfoRef, {
+            ...siteInfo,
+            updatedAt: serverTimestamp(),
+            updatedBy: auth.currentUser.email || auth.currentUser.uid
+          }, { merge: true });
+
+          showStatus('SEO & Favicon saved successfully.');
+        } catch (error) {
+          showStatus(error.message || 'Could not save SEO settings.', true);
         }
       });
 
