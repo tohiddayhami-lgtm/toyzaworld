@@ -518,19 +518,29 @@
         counter.className = len > 160 ? 'font-bold text-brandRed' : len >= 150 ? 'font-bold text-green-600' : 'font-bold text-deepNavy/60';
       });
 
-      // Favicon file upload → base64
+      // Favicon file upload → resize to 64×64 with canvas → compact base64
       $('favicon-file').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        if (file.size > 512 * 1024) {
-          showStatus('Image too large — please use an image under 512 KB.', true);
-          return;
-        }
+
         const reader = new FileReader();
         reader.onload = (ev) => {
-          const dataUrl = ev.target.result;
-          $('site-faviconUrl').value = dataUrl;
-          updateFaviconPreview(dataUrl);
+          const img = new Image();
+          img.onload = () => {
+            const SIZE = 64;
+            const canvas = document.createElement('canvas');
+            canvas.width = SIZE;
+            canvas.height = SIZE;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, SIZE, SIZE);
+            const dataUrl = canvas.toDataURL('image/png');
+            $('site-faviconUrl').value = dataUrl;
+            updateFaviconPreview(dataUrl);
+            // Show approx size to user
+            const kb = Math.round((dataUrl.length * 3) / 4 / 1024);
+            showStatus(`Favicon resized to 64×64 px — ~${kb} KB ready to save.`);
+          };
+          img.src = ev.target.result;
         };
         reader.readAsDataURL(file);
       });
@@ -556,16 +566,26 @@
       $('seo-form').addEventListener('submit', async (event) => {
         event.preventDefault();
         try {
-          siteInfo.seoTitle = $('site-seoTitle').value.trim();
-          siteInfo.seoDescription = $('site-seoDescription').value.trim();
-          siteInfo.seoKeywords = $('site-seoKeywords').value.trim();
-          siteInfo.faviconUrl = $('site-faviconUrl').value.trim();
+          const seoTitle = $('site-seoTitle').value.trim();
+          const seoDescription = $('site-seoDescription').value.trim();
+          const seoKeywords = $('site-seoKeywords').value.trim();
+          const faviconUrl = $('site-faviconUrl').value.trim();
 
+          // Save only SEO fields using merge — avoids rewriting large siteInfo
           await setDoc(siteInfoRef, {
-            ...siteInfo,
+            seoTitle,
+            seoDescription,
+            seoKeywords,
+            faviconUrl,
             updatedAt: serverTimestamp(),
             updatedBy: auth.currentUser.email || auth.currentUser.uid
           }, { merge: true });
+
+          // Keep local state in sync
+          siteInfo.seoTitle = seoTitle;
+          siteInfo.seoDescription = seoDescription;
+          siteInfo.seoKeywords = seoKeywords;
+          siteInfo.faviconUrl = faviconUrl;
 
           showStatus('SEO & Favicon saved successfully.');
         } catch (error) {
