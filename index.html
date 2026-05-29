@@ -786,6 +786,7 @@
         { id: 'jp', label: '🇯🇵 Japan', parent: 'root', level: 1, type: 'countries', desc: 'Character figures, puzzles, model kits, collectible toys, and precision play products.' },
         { id: 'us', label: '🇺🇸 USA', parent: 'root', level: 1, type: 'countries', desc: 'Global brand owners for action figures, board games, dolls, and preschool toys.' },
         { id: 'vn', label: '🇻🇳 Vietnam', parent: 'root', level: 1, type: 'countries', desc: 'Growing supplier base for plush toys, wooden toys, and export-ready toy production.' },
+        { id: 'nl', label: '🇳🇱 Netherlands', parent: 'root', level: 1, type: 'countries', desc: 'European toy distribution hub with direct access to EU-certified Dutch-quality play brands and sourcing networks.' },
 
         // Level 2 - Categories inside countries
         { id: 'cn_edu', label: '🧠 Educational Toys', parent: 'cn', level: 2, type: 'categories', desc: 'STEM kits, learning tablets, coding toys, and classroom-focused play sets from China.' },
@@ -813,6 +814,9 @@
         { id: 'vn_plush', label: '🧸 Plush Toys', parent: 'vn', level: 2, type: 'categories', desc: 'Export-ready stuffed toys, soft characters, and textile-based toy production.' },
         { id: 'vn_wood', label: '🌳 Wooden Toys', parent: 'vn', level: 2, type: 'categories', desc: 'Wooden learning kits, block sets, puzzles, and small-batch natural toys.' },
 
+        { id: 'nl_wood', label: '🪵 Wooden Toys', parent: 'nl', level: 2, type: 'categories', desc: 'Artisan wooden toys, eco blocks, and Montessori-inspired learning products.' },
+        { id: 'nl_edu', label: '🎓 Educational Toys', parent: 'nl', level: 2, type: 'categories', desc: 'Dutch-made educational toys focused on creativity, STEM, and early childhood development.' },
+
         // Level 3 - Brands with website links
         { id: 'cn_edu_hape', label: 'Hape', parent: 'cn_edu', level: 3, type: 'brands', desc: 'Educational wooden and early learning toys with global distribution.', website: 'https://www.hape.com', brand: true },
         { id: 'cn_edu_vtech', label: 'VTech Kids', parent: 'cn_edu', level: 3, type: 'brands', desc: 'Electronic learning toys, tablets, and preschool education devices.', website: 'https://www.vtechkids.com', brand: true },
@@ -838,7 +842,10 @@
         { id: 'us_dolls_mattel', label: 'Mattel', parent: 'us_dolls', level: 3, type: 'brands', desc: 'Fashion dolls, preschool brands, vehicles, and global character toys.', website: 'https://www.mattel.com', brand: true },
 
         { id: 'vn_plush_ty', label: 'Ty', parent: 'vn_plush', level: 3, type: 'brands', desc: 'Plush collectibles and soft toy product lines.', website: 'https://shop.ty.com', brand: true },
-        { id: 'vn_wood_janod', label: 'Janod', parent: 'vn_wood', level: 3, type: 'brands', desc: 'Wooden toys, puzzles, and design-led early learning collections.', website: 'https://www.janod.com', brand: true }
+        { id: 'vn_wood_janod', label: 'Janod', parent: 'vn_wood', level: 3, type: 'brands', desc: 'Wooden toys, puzzles, and design-led early learning collections.', website: 'https://www.janod.com', brand: true },
+
+        { id: 'nl_wood_selecta', label: 'Selecta', parent: 'nl_wood', level: 3, type: 'brands', desc: 'Premium wooden baby and toddler toys with European safety certification.', website: 'https://www.selecta.de', brand: true },
+        { id: 'nl_edu_goki', label: 'Goki', parent: 'nl_edu', level: 3, type: 'brands', desc: 'Classic wooden toys and educational play items crafted for early learners.', website: 'https://www.goki.de', brand: true }
       ];
 
       // O(1) lookup map — rebuilt whenever NODES changes

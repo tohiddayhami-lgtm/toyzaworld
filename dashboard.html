@@ -9,6 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Fraunces:wght@700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      details[open] > summary .tree-chevron { transform: rotate(180deg); }
+    </style>
     <script>
       tailwind.config = {
         theme: {
@@ -32,7 +35,7 @@
   </head>
   <body class="min-h-screen bg-warmOffwhite text-deepNavy font-sans">
     <main class="min-h-screen flex items-center justify-center px-4 py-10">
-      <section class="w-full max-w-3xl bg-white border-2 border-deepNavy rounded-lg shadow-[7px_7px_0px_#1D3557] overflow-hidden">
+      <section class="w-full max-w-5xl bg-white border-2 border-deepNavy rounded-lg shadow-[7px_7px_0px_#1D3557] overflow-hidden">
         <div class="flex items-center justify-between gap-4 bg-deepNavy text-white px-5 py-4">
           <div>
             <a href="index.html" class="font-mono text-[10px] uppercase tracking-widest text-white/60 hover:text-toyOrange">Back to site</a>
@@ -208,44 +211,90 @@
               <button type="submit" class="px-4 py-2 bg-deepNavy text-white rounded text-xs font-bold uppercase hover:bg-brandRed transition-all">Save SEO & Favicon</button>
             </form>
 
-            <form id="edit-form" class="grid grid-cols-1 sm:grid-cols-2 gap-3 border-2 border-slateLines rounded p-4 mb-4">
-              <h2 class="sm:col-span-2 font-bold text-xs uppercase tracking-wider">Edit Existing Item</h2>
-              <div class="sm:col-span-2 flex gap-2">
-                <select id="node-type-filter" class="px-3 py-2 border-2 border-deepNavy rounded text-sm bg-warmOffwhite font-bold">
-                  <option value="">All Types</option>
-                  <option value="countries">Countries</option>
-                  <option value="categories">Categories</option>
-                  <option value="brands">Brands</option>
-                </select>
-                <select id="node-select" class="flex-1 px-3 py-2 border-2 border-deepNavy rounded text-sm"></select>
+            <!-- CATALOGUE TREE EDITOR -->
+            <div class="border-2 border-deepNavy rounded shadow-[3px_3px_0px_#1D3557] overflow-hidden">
+              <!-- Tree header -->
+              <div class="flex items-center justify-between gap-3 px-4 py-3 bg-deepNavy text-white">
+                <div>
+                  <h2 class="font-bold text-xs uppercase tracking-wider">Catalogue Tree</h2>
+                  <p class="text-[10px] text-white/50 mt-0.5">Click a node to edit · + buttons to add children</p>
+                </div>
+                <button id="add-country-btn" type="button" class="text-[10px] font-bold bg-delftBlue text-white px-3 py-1.5 rounded border border-white/20 hover:bg-blue-500 transition-all uppercase tracking-wide whitespace-nowrap">
+                  + Country
+                </button>
               </div>
-              <input id="node-label" required type="text" placeholder="Name" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <select id="node-parent" class="px-3 py-2 border-2 border-deepNavy rounded text-sm"></select>
-              <textarea id="node-desc" rows="2" placeholder="Description" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm"></textarea>
-              <input id="node-website" type="text" placeholder="Brand website link" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <label class="sm:col-span-2 flex items-center gap-2 text-xs font-bold">
-                <input id="node-hidden" type="checkbox" class="accent-brandRed">
-                Hide from customers
-              </label>
-              <div class="sm:col-span-2 flex justify-between gap-3">
-                <button id="delete-node" type="button" class="px-4 py-2 border-2 border-brandRed text-brandRed rounded text-xs font-bold uppercase hover:bg-brandRed hover:text-white transition-all">Delete</button>
-                <button type="submit" class="px-4 py-2 bg-deepNavy text-white rounded text-xs font-bold uppercase hover:bg-brandRed transition-all">Save</button>
-              </div>
-            </form>
 
-            <form id="add-form" class="grid grid-cols-1 sm:grid-cols-2 gap-3 border-2 border-slateLines rounded p-4">
-              <h2 class="sm:col-span-2 font-bold text-xs uppercase tracking-wider">Add New Item</h2>
-              <select id="new-type" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
-                <option value="countries">Country</option>
-                <option value="categories">Category</option>
-                <option value="brands">Brand Link</option>
-              </select>
-              <select id="new-parent" class="px-3 py-2 border-2 border-deepNavy rounded text-sm"></select>
-              <input id="new-label" required type="text" placeholder="Name" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <input id="new-website" type="text" placeholder="Website for brand" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
-              <textarea id="new-desc" rows="2" placeholder="Description" class="sm:col-span-2 px-3 py-2 border-2 border-deepNavy rounded text-sm"></textarea>
-              <button type="submit" class="sm:col-span-2 px-4 py-2 bg-brandRed text-white rounded text-xs font-bold uppercase hover:bg-deepNavy transition-all">Add Item</button>
-            </form>
+              <!-- Two-column layout: tree + edit panel -->
+              <div class="flex flex-col lg:flex-row min-h-[300px]">
+
+                <!-- Tree column -->
+                <div id="catalogue-tree" class="flex-1 overflow-y-auto max-h-[520px] divide-y divide-slate-100 bg-[#FAFAF7]">
+                  <!-- Filled by JS -->
+                </div>
+
+                <!-- Edit / Add panel -->
+                <div id="tree-edit-panel" class="hidden lg:w-72 shrink-0 border-t-2 lg:border-t-0 lg:border-l-2 border-deepNavy bg-white">
+                  <form id="tree-node-form" class="flex flex-col h-full">
+                    <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between gap-2 bg-warmOffwhite">
+                      <div>
+                        <span id="panel-mode-badge" class="text-[9px] font-bold uppercase tracking-widest text-white bg-deepNavy px-2 py-0.5 rounded">Edit</span>
+                        <span id="panel-type-badge" class="ml-1 text-[9px] font-bold uppercase tracking-widest text-deepNavy/60">Country</span>
+                      </div>
+                      <button type="button" id="panel-close-btn" class="text-deepNavy/40 hover:text-brandRed p-1" aria-label="Close panel">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                      <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Name *</label>
+                        <input id="panel-label" required type="text" placeholder="e.g. 🇫🇷 France" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+                      </div>
+                      <div id="panel-parent-row" class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Parent</label>
+                        <select id="panel-parent" class="px-3 py-2 border-2 border-deepNavy rounded text-sm bg-white"></select>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Description</label>
+                        <textarea id="panel-desc" rows="3" placeholder="Short sourcing description…" class="px-3 py-2 border-2 border-deepNavy rounded text-sm resize-none"></textarea>
+                      </div>
+                      <div id="panel-website-row" class="flex flex-col gap-1 hidden">
+                        <label class="text-[9px] font-bold uppercase tracking-wider text-deepNavy/50">Website URL</label>
+                        <input id="panel-website" type="text" placeholder="https://brand.com" class="px-3 py-2 border-2 border-deepNavy rounded text-sm">
+                      </div>
+                      <label class="flex items-center gap-2 text-xs font-bold cursor-pointer">
+                        <input id="panel-hidden" type="checkbox" class="accent-brandRed w-3.5 h-3.5">
+                        Hide from customers
+                      </label>
+                    </div>
+
+                    <div class="p-4 border-t border-slate-200 flex gap-2">
+                      <button id="panel-delete-btn" type="button" class="hidden px-3 py-2 border-2 border-brandRed text-brandRed rounded text-xs font-bold uppercase hover:bg-brandRed hover:text-white transition-all">
+                        Delete
+                      </button>
+                      <button type="submit" class="flex-1 px-4 py-2 bg-deepNavy text-white rounded text-xs font-bold uppercase hover:bg-brandRed transition-all">
+                        Save
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Hidden legacy selects kept for JS compat -->
+            <select id="node-select" class="hidden"></select>
+            <select id="node-type-filter" class="hidden"></select>
+            <select id="node-parent" class="hidden"></select>
+            <input id="node-label" type="text" class="hidden">
+            <textarea id="node-desc" class="hidden"></textarea>
+            <input id="node-website" type="text" class="hidden">
+            <input id="node-hidden" type="checkbox" class="hidden">
+            <select id="new-type" class="hidden"><option value="countries">Country</option><option value="categories">Category</option><option value="brands">Brand Link</option></select>
+            <select id="new-parent" class="hidden"></select>
+            <input id="new-label" type="text" class="hidden">
+            <input id="new-website" type="text" class="hidden">
+            <textarea id="new-desc" class="hidden"></textarea>
           </div>
         </div>
       </section>
@@ -307,6 +356,7 @@
         { id: 'jp', label: '🇯🇵 Japan', parent: 'root', level: 1, type: 'countries', desc: 'Character figures, puzzles, model kits, collectible toys, and precision play products.' },
         { id: 'us', label: '🇺🇸 USA', parent: 'root', level: 1, type: 'countries', desc: 'Global brand owners for action figures, board games, dolls, and preschool toys.' },
         { id: 'vn', label: '🇻🇳 Vietnam', parent: 'root', level: 1, type: 'countries', desc: 'Growing supplier base for plush toys, wooden toys, and export-ready toy production.' },
+        { id: 'nl', label: '🇳🇱 Netherlands', parent: 'root', level: 1, type: 'countries', desc: 'European toy distribution hub with direct access to EU-certified Dutch-quality play brands and sourcing networks.' },
         { id: 'cn_edu', label: '🧠 Educational Toys', parent: 'cn', level: 2, type: 'categories', desc: 'STEM kits, learning tablets, coding toys, and classroom-focused play sets from China.' },
         { id: 'cn_elec', label: '🤖 Electronic Toys', parent: 'cn', level: 2, type: 'categories', desc: 'Robots, interactive sound toys, RC toys, and sensor-based smart play products.' },
         { id: 'cn_plush', label: '🧸 Plush & Soft Toys', parent: 'cn', level: 2, type: 'categories', desc: 'Soft dolls, plush characters, and high-volume textile toy production.' },
@@ -325,6 +375,8 @@
         { id: 'us_dolls', label: '👗 Dolls & Preschool', parent: 'us', level: 2, type: 'categories', desc: 'Fashion dolls, preschool characters, role-play toys, and infant play collections.' },
         { id: 'vn_plush', label: '🧸 Plush Toys', parent: 'vn', level: 2, type: 'categories', desc: 'Export-ready stuffed toys, soft characters, and textile-based toy production.' },
         { id: 'vn_wood', label: '🌳 Wooden Toys', parent: 'vn', level: 2, type: 'categories', desc: 'Wooden learning kits, block sets, puzzles, and small-batch natural toys.' },
+        { id: 'nl_wood', label: '🪵 Wooden Toys', parent: 'nl', level: 2, type: 'categories', desc: 'Artisan wooden toys, eco blocks, and Montessori-inspired learning products.' },
+        { id: 'nl_edu', label: '🎓 Educational Toys', parent: 'nl', level: 2, type: 'categories', desc: 'Dutch-made educational toys focused on creativity, STEM, and early childhood development.' },
         { id: 'cn_edu_hape', label: 'Hape', parent: 'cn_edu', level: 3, type: 'brands', desc: 'Educational wooden and early learning toys with global distribution.', website: 'https://www.hape.com', brand: true },
         { id: 'cn_edu_vtech', label: 'VTech Kids', parent: 'cn_edu', level: 3, type: 'brands', desc: 'Electronic learning toys, tablets, and preschool education devices.', website: 'https://www.vtechkids.com', brand: true },
         { id: 'cn_elec_popmart', label: 'POP MART', parent: 'cn_elec', level: 3, type: 'brands', desc: 'Collectible designer toys, blind boxes, and character merchandise.', website: 'https://www.popmart.com', brand: true },
@@ -343,7 +395,9 @@
         { id: 'us_board_hasbro', label: 'Hasbro Gaming', parent: 'us_board', level: 3, type: 'brands', desc: 'Classic board games, party games, and family tabletop products.', website: 'https://shop.hasbro.com/en-us/hasbro-gaming', brand: true },
         { id: 'us_dolls_mattel', label: 'Mattel', parent: 'us_dolls', level: 3, type: 'brands', desc: 'Fashion dolls, preschool brands, vehicles, and global character toys.', website: 'https://www.mattel.com', brand: true },
         { id: 'vn_plush_ty', label: 'Ty', parent: 'vn_plush', level: 3, type: 'brands', desc: 'Plush collectibles and soft toy product lines.', website: 'https://shop.ty.com', brand: true },
-        { id: 'vn_wood_janod', label: 'Janod', parent: 'vn_wood', level: 3, type: 'brands', desc: 'Wooden toys, puzzles, and design-led early learning collections.', website: 'https://www.janod.com', brand: true }
+        { id: 'vn_wood_janod', label: 'Janod', parent: 'vn_wood', level: 3, type: 'brands', desc: 'Wooden toys, puzzles, and design-led early learning collections.', website: 'https://www.janod.com', brand: true },
+        { id: 'nl_wood_selecta', label: 'Selecta', parent: 'nl_wood', level: 3, type: 'brands', desc: 'Premium wooden baby and toddler toys with European safety certification.', website: 'https://www.selecta.de', brand: true },
+        { id: 'nl_edu_goki', label: 'Goki', parent: 'nl_edu', level: 3, type: 'brands', desc: 'Classic wooden toys and educational play items crafted for early learners.', website: 'https://www.goki.de', brand: true }
       ];
 
       function showStatus(message, isError = false) {
@@ -552,6 +606,150 @@
 
         renderNodeSelect();
         fillParentSelect($('new-parent'), $('new-type').value);
+        buildCatalogueTree();
+      }
+
+      // ─── TREE BUILDER ──────────────────────────────────────────────────────
+      const TREE_CHV = `<svg class="tree-chevron w-3 h-3 shrink-0 transition-transform duration-200" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>`;
+
+      let treeMode = null;     // 'edit' | 'add'
+      let treeTargetId = null; // edit → nodeId; add → parentId
+      let treeAddType = null;  // 'countries' | 'categories' | 'brands'
+
+      function buildCatalogueTree() {
+        const container = $('catalogue-tree');
+        if (!container) return;
+
+        const countries = nodes.filter(n => n.parent === 'root' && !n.deleted);
+        if (countries.length === 0) {
+          container.innerHTML = '<p class="text-xs text-deepNavy/40 italic px-4 py-6 text-center">No countries yet — click + Country to add one.</p>';
+          return;
+        }
+
+        container.innerHTML = countries.map(country => {
+          const hiddenTag = country.hidden ? '<span class="ml-1 text-[9px] font-bold text-white/40 uppercase">hidden</span>' : '';
+          const categories = nodes.filter(n => n.parent === country.id && !n.deleted);
+
+          const catsHtml = categories.length === 0
+            ? '<div class="px-4 py-2 text-[10px] text-deepNavy/30 italic">No categories — add one →</div>'
+            : categories.map(cat => {
+                const catHidden = cat.hidden ? '<span class="ml-1 text-[9px] text-deepNavy/30 uppercase font-bold">hidden</span>' : '';
+                const brands = nodes.filter(n => n.parent === cat.id && !n.deleted);
+
+                const brandsHtml = brands.length === 0
+                  ? '<div class="px-6 py-1.5 text-[10px] text-deepNavy/25 italic">No brands</div>'
+                  : brands.map(brand => {
+                      const bHidden = brand.hidden ? '<span class="text-[9px] text-deepNavy/30 uppercase font-bold ml-1">hidden</span>' : '';
+                      let domain = '';
+                      try { domain = new URL(brand.website || '').hostname.replace('www.', ''); } catch {}
+                      return `
+                        <div class="flex items-center gap-1.5 px-6 py-2 hover:bg-slate-50 border-b border-slate-50 last:border-b-0">
+                          <span class="w-1 h-3 bg-brandRed/60 rounded-full shrink-0"></span>
+                          <span class="text-xs text-deepNavy font-medium flex-1 truncate">${brand.label}${bHidden}</span>
+                          ${domain ? `<span class="text-[9px] text-deepNavy/30 font-mono shrink-0 hidden sm:block">${domain}</span>` : ''}
+                          <button type="button" data-edit="${brand.id}" class="tree-edit-btn shrink-0 text-[9px] font-bold text-white bg-deepNavy/50 hover:bg-deepNavy px-2 py-0.5 rounded">Edit</button>
+                        </div>`;
+                    }).join('');
+
+                return `
+                  <details class="border-l-[3px] border-l-toyOrange">
+                    <summary class="list-none cursor-pointer flex items-center gap-1.5 px-3 py-2 bg-[#FAFAF7] hover:bg-orange-50 select-none border-b border-slate-100">
+                      <span class="text-toyOrange">${TREE_CHV}</span>
+                      <span class="font-bold text-xs text-deepNavy flex-1 truncate">${cat.label}${catHidden}</span>
+                      <span class="text-[9px] text-deepNavy/30 tabular-nums shrink-0">${brands.length}</span>
+                      <div class="flex gap-1 shrink-0" onclick="event.stopPropagation()">
+                        <button type="button" data-edit="${cat.id}" class="tree-edit-btn text-[9px] font-bold text-white bg-deepNavy/40 hover:bg-deepNavy px-1.5 py-0.5 rounded">Edit</button>
+                        <button type="button" data-add-parent="${cat.id}" data-add-type="brands" class="tree-add-btn text-[9px] font-bold text-white bg-toyOrange hover:bg-orange-500 px-1.5 py-0.5 rounded">+ Brand</button>
+                      </div>
+                    </summary>
+                    <div class="bg-white divide-y divide-slate-50">${brandsHtml}</div>
+                  </details>`;
+              }).join('');
+
+          return `
+            <details class="border-b-2 border-deepNavy/10">
+              <summary class="list-none cursor-pointer flex items-center gap-2 px-3 py-3 bg-white hover:bg-slate-50 select-none">
+                <span class="text-delftBlue">${TREE_CHV}</span>
+                <span class="font-bold text-sm text-deepNavy flex-1 truncate">${country.label}${hiddenTag}</span>
+                <span class="text-[10px] text-deepNavy/30 tabular-nums shrink-0">${categories.length} cats</span>
+                <div class="flex gap-1 shrink-0" onclick="event.stopPropagation()">
+                  <button type="button" data-edit="${country.id}" class="tree-edit-btn text-[9px] font-bold text-white bg-delftBlue hover:bg-blue-600 px-2 py-1 rounded">Edit</button>
+                  <button type="button" data-add-parent="${country.id}" data-add-type="categories" class="tree-add-btn text-[9px] font-bold text-white bg-deepNavy/50 hover:bg-deepNavy px-2 py-1 rounded">+ Cat</button>
+                </div>
+              </summary>
+              <div class="divide-y divide-slate-100">${catsHtml}</div>
+            </details>`;
+        }).join('');
+
+        // Attach tree button event listeners via delegation
+        container.querySelectorAll('.tree-edit-btn').forEach(btn => {
+          btn.addEventListener('click', () => openEditPanel(btn.dataset.edit));
+        });
+        container.querySelectorAll('.tree-add-btn').forEach(btn => {
+          btn.addEventListener('click', () => openAddPanel(btn.dataset.addParent, btn.dataset.addType));
+        });
+
+        // Chevron rotation for details
+        container.querySelectorAll('details').forEach(d => {
+          const chevron = d.querySelector(':scope > summary .tree-chevron');
+          if (!chevron) return;
+          if (d.open) chevron.style.transform = 'rotate(180deg)';
+          d.addEventListener('toggle', () => {
+            chevron.style.transform = d.open ? 'rotate(180deg)' : '';
+          });
+        });
+      }
+
+      function openEditPanel(nodeId) {
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node) return;
+        treeMode = 'edit';
+        treeTargetId = nodeId;
+        treeAddType = null;
+
+        $('panel-mode-badge').textContent = 'Edit';
+        $('panel-mode-badge').className = 'text-[9px] font-bold uppercase tracking-widest text-white bg-deepNavy px-2 py-0.5 rounded';
+        $('panel-type-badge').textContent = node.type;
+        $('panel-label').value = node.label || '';
+        $('panel-desc').value = node.desc || '';
+        $('panel-website').value = node.website || '';
+        $('panel-hidden').checked = Boolean(node.hidden);
+        $('panel-website-row').classList.toggle('hidden', node.type !== 'brands');
+        $('panel-parent-row').classList.toggle('hidden', node.type === 'countries');
+        fillParentSelect($('panel-parent'), node.type, node.parent);
+        $('panel-delete-btn').classList.remove('hidden');
+
+        $('tree-edit-panel').classList.remove('hidden');
+        $('panel-label').focus();
+      }
+
+      function openAddPanel(parentId, type) {
+        treeMode = 'add';
+        treeTargetId = parentId;
+        treeAddType = type;
+
+        const typeLabel = type === 'countries' ? 'Country' : type === 'categories' ? 'Category' : 'Brand';
+        $('panel-mode-badge').textContent = 'Add';
+        $('panel-mode-badge').className = 'text-[9px] font-bold uppercase tracking-widest text-white bg-brandRed px-2 py-0.5 rounded';
+        $('panel-type-badge').textContent = typeLabel;
+        $('panel-label').value = '';
+        $('panel-desc').value = '';
+        $('panel-website').value = '';
+        $('panel-hidden').checked = false;
+        $('panel-website-row').classList.toggle('hidden', type !== 'brands');
+        $('panel-parent-row').classList.toggle('hidden', type === 'countries');
+        fillParentSelect($('panel-parent'), type, parentId);
+        $('panel-delete-btn').classList.add('hidden');
+
+        $('tree-edit-panel').classList.remove('hidden');
+        $('panel-label').focus();
+      }
+
+      function closeEditPanel() {
+        $('tree-edit-panel').classList.add('hidden');
+        treeMode = null;
+        treeTargetId = null;
+        treeAddType = null;
       }
 
       function renderSiteInfo() {
@@ -677,61 +875,64 @@
         showStatus('SEO meta tags are set directly in the site HTML — changes here are for reference only. Edit index.html <head> to update live SEO.');
       });
 
-      $('edit-form').addEventListener('submit', async (event) => {
+      // ─── TREE PANEL FORM HANDLER ───────────────────────────────────────────
+      $('tree-node-form').addEventListener('submit', async (event) => {
         event.preventDefault();
         try {
-          const node = nodes.find((item) => item.id === $('node-select').value);
-          if (!node) return;
-          const label = clean($('node-label').value);
+          const label = clean($('panel-label').value);
           if (!label) return showStatus('Name is required.', true);
-          node.label = label;
-          node.desc = $('node-desc').value.trim();
-          node.parent = $('node-parent').value || node.parent;
-          node.hidden = $('node-hidden').checked;
-          node.deleted = false;
-          if (node.type === 'brands') {
-            node.website = $('node-website').value.trim() ? normalizeUrl($('node-website').value) : '';
-            node.brand = true;
+
+          if (treeMode === 'edit') {
+            const node = nodes.find(n => n.id === treeTargetId);
+            if (!node) return;
+            node.label = label;
+            node.desc = $('panel-desc').value.trim();
+            node.hidden = $('panel-hidden').checked;
+            node.deleted = false;
+            if (node.type !== 'countries') node.parent = $('panel-parent').value || node.parent;
+            if (node.type === 'brands') {
+              node.website = $('panel-website').value.trim() ? normalizeUrl($('panel-website').value) : '';
+              node.brand = true;
+            }
+            updateLevel(node);
+            closeEditPanel();
+            await saveNodes('Saved.');
+          } else if (treeMode === 'add') {
+            const type = treeAddType;
+            const parentVal = type === 'countries' ? 'root' : $('panel-parent').value;
+            const newNode = {
+              id: `admin_${type}_${Date.now()}`,
+              label,
+              parent: parentVal,
+              level: 1,
+              type,
+              desc: $('panel-desc').value.trim(),
+              website: type === 'brands' && $('panel-website').value.trim() ? normalizeUrl($('panel-website').value) : '',
+              brand: type === 'brands'
+            };
+            updateLevel(newNode);
+            nodes.push(newNode);
+            closeEditPanel();
+            await saveNodes('Added.');
           }
-          updateLevel(node);
-          await saveNodes('Saved.');
         } catch (error) {
           showStatus(error.message || 'Could not save.', true);
         }
       });
 
-      $('delete-node').addEventListener('click', async () => {
-        const node = nodes.find((item) => item.id === $('node-select').value);
+      $('panel-delete-btn').addEventListener('click', async () => {
+        if (!treeTargetId) return;
+        const node = nodes.find(n => n.id === treeTargetId);
         if (!node) return;
+        if (!confirm(`Delete "${node.label}" and all its children?`)) return;
         markDeleted(node.id);
+        closeEditPanel();
         await saveNodes('Deleted.');
       });
 
-      $('add-form').addEventListener('submit', async (event) => {
-        event.preventDefault();
-        try {
-          const type = $('new-type').value;
-          const label = clean($('new-label').value);
-          if (!label) return showStatus('Name is required.', true);
-          const node = {
-            id: `admin_${type}_${Date.now()}`,
-            label,
-            parent: $('new-parent').value,
-            level: 1,
-            type,
-            desc: $('new-desc').value.trim(),
-            website: '',
-            brand: type === 'brands'
-          };
-          if (type === 'brands') node.website = normalizeUrl($('new-website').value);
-          updateLevel(node);
-          nodes.push(node);
-          $('add-form').reset();
-          await saveNodes('Added.');
-        } catch (error) {
-          showStatus(error.message || 'Could not add item.', true);
-        }
-      });
+      $('panel-close-btn').addEventListener('click', closeEditPanel);
+
+      $('add-country-btn').addEventListener('click', () => openAddPanel('root', 'countries'));
 
       onAuthStateChanged(auth, async (user) => {
         if (!user) {
