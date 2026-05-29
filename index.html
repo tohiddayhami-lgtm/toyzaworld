@@ -1590,6 +1590,16 @@
         handleSearchChange();
       }
 
+      // Collapse the deepest currently-expanded level (click-background-to-close)
+      function collapseDeepestLevel() {
+        let maxLevel = -1;
+        NODES.forEach(n => { if (n.expanded) maxLevel = Math.max(maxLevel, n.level); });
+        if (maxLevel < 0) return;
+        NODES.forEach(n => { if (n.expanded && n.level === maxLevel) n.expanded = false; });
+        assignPositions();
+        resumeAnimation();
+      }
+
       // Drag and scroll viewport zoom
       function setupDragAndZoom() {
         const container = document.getElementById('map-canvas-container');
@@ -1605,11 +1615,18 @@
         currentZoom = targetZoom;
 
         container.addEventListener('mousedown', (e) => {
-          if (e.target.closest('[id^="node-el-"]')) return; // ignore dragging if clicked on node directly
+          if (e.target.closest('[id^="node-el-"]')) return;
           isDragging = true;
           isDragMovement = false;
           startX = e.clientX - targetPanX;
           startY = e.clientY - targetPanY;
+        });
+
+        // Click on empty canvas background → collapse the deepest open level
+        container.addEventListener('click', (e) => {
+          if (e.target.closest('[id^="node-el-"]')) return;
+          if (isDragMovement) return;
+          collapseDeepestLevel();
         });
 
         window.addEventListener('mousemove', (e) => {
@@ -1617,7 +1634,7 @@
           const currentX = e.clientX - startX;
           const currentY = e.clientY - startY;
 
-          if (Math.hypot(currentX - targetPanX, currentY - targetPanY) > 5) {
+          if (Math.hypot(currentX - targetPanX, currentY - targetPanY) > 10) {
             isDragMovement = true;
           }
 
@@ -1631,6 +1648,9 @@
 
         window.addEventListener('mouseup', () => {
           isDragging = false;
+          // Reset after the current click event fires, so drag-end over a node is still blocked
+          // but the very next independent click works correctly
+          setTimeout(() => { isDragMovement = false; }, 0);
         });
 
         // Touch setups for tablet scrolling panners
@@ -1649,7 +1669,7 @@
           const currentX = e.touches[0].clientX - startX;
           const currentY = e.touches[0].clientY - startY;
 
-          if (Math.hypot(currentX - targetPanX, currentY - targetPanY) > 5) {
+          if (Math.hypot(currentX - targetPanX, currentY - targetPanY) > 10) {
             isDragMovement = true;
           }
 
@@ -1662,6 +1682,7 @@
 
         window.addEventListener('touchend', () => {
           isDragging = false;
+          setTimeout(() => { isDragMovement = false; }, 0);
         });
 
         // Wheel listeners
