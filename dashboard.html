@@ -228,7 +228,7 @@
                 <div class="flex flex-col gap-2">
                   <div>
                     <p class="text-[10px] font-bold uppercase tracking-wider text-deepNavy/70">JSON for AI import</p>
-                    <p class="text-[10px] text-deepNavy/50 mt-0.5 leading-relaxed">Download the sample, paste your links into <span class="font-mono">inputLinks</span>, ask AI to fill <span class="font-mono">catalog</span>, then upload the JSON here.</p>
+                    <p class="text-[10px] text-deepNavy/50 mt-0.5 leading-relaxed">Use the flat <span class="font-mono">links[]</span> sample. Give your URLs to AI with country + category per row, then upload the JSON.</p>
                   </div>
                   <div class="flex flex-wrap gap-2">
                     <button id="download-catalog-sample" type="button" class="px-3 py-2 bg-white border-2 border-deepNavy rounded text-[10px] font-bold uppercase tracking-wide hover:bg-deepNavy hover:text-white transition-all">
@@ -483,7 +483,18 @@
         }));
       }
 
-      const CATALOG_JSON_FORMAT = 'toyza-catalog-v1';
+      const CATALOG_JSON_FORMAT_V2 = 'toyza-catalog-v2';
+      const CATALOG_JSON_FORMAT_V1 = 'toyza-catalog-v1';
+
+      function nameFromUrl(url) {
+        try {
+          const host = new URL(url).hostname.replace(/^www\./, '');
+          const part = host.split('.')[0] || 'link';
+          return part.charAt(0).toUpperCase() + part.slice(1);
+        } catch {
+          return 'Link';
+        }
+      }
 
       function slugifyCatalogId(value = '') {
         return String(value)
@@ -509,63 +520,140 @@
 
       function buildCatalogSampleJson() {
         return {
-          format: CATALOG_JSON_FORMAT,
-          version: 1,
-          aiInstructions: 'You receive toy brand or supplier website URLs. Return ONLY valid JSON in this exact structure (no markdown). Build catalog[] with: country (flag emoji + name), countryCode (2-letter lowercase), description, categories[] with name (emoji optional), description, brands[] with name, website (full https URL), description (max 160 chars). Infer the best country and toy category for each link.',
-          inputLinks: [
-            'https://www.lego.com',
-            'https://www.hape.com',
-            'https://www.selecta.de',
-            'https://www.example-new-brand.com'
-          ],
-          catalog: [
+          format: CATALOG_JSON_FORMAT_V2,
+          version: 2,
+          aiInstructions: 'Return ONLY valid JSON. For each website URL add one object in links[] with: name, url, country, countryCode (2-letter), category, notes (optional). Group similar toy suppliers under the same country and category. Do not invent nested catalog trees.',
+          links: [
             {
-              country: '🇩🇰 Denmark',
+              name: 'LEGO',
+              url: 'https://www.lego.com',
+              country: 'Denmark',
               countryCode: 'dk',
-              description: 'Premium construction toys, creative brick systems, and educational play brands.',
-              categories: [
-                {
-                  name: '🧱 Construction Toys',
-                  description: 'Interlocking bricks, creator systems, and architecture-inspired construction play.',
-                  brands: [
-                    {
-                      name: 'LEGO',
-                      website: 'https://www.lego.com',
-                      description: 'Global construction brick systems, creator sets, and educational series.'
-                    }
-                  ]
-                }
-              ]
+              category: 'Construction Toys',
+              notes: 'Global construction brick systems.'
+            },
+            {
+              name: 'Hape',
+              url: 'https://www.hape.com',
+              country: 'China',
+              countryCode: 'cn',
+              category: 'Educational Toys',
+              notes: 'Educational wooden and early learning toys.'
+            },
+            {
+              name: 'Selecta',
+              url: 'https://www.selecta.de',
+              country: 'Netherlands',
+              countryCode: 'nl',
+              category: 'Wooden Toys',
+              notes: 'Premium wooden baby and toddler toys.'
             }
           ]
         };
       }
 
       function exportCurrentCatalogJson() {
-        const countries = nodes.filter((node) => node.parent === 'root' && !node.deleted);
+        const links = nodes
+          .filter((node) => node.type === 'brands' && !node.deleted)
+          .map((brand) => {
+            const category = nodes.find((node) => node.id === brand.parent);
+            const country = category ? nodes.find((node) => node.id === category.parent) : null;
+            return {
+              name: brand.label,
+              url: brand.website || '',
+              country: country?.label || '',
+              countryCode: country?.id || '',
+              category: category?.label || '',
+              notes: brand.desc || ''
+            };
+          })
+          .filter((link) => link.url);
+
         return {
-          format: CATALOG_JSON_FORMAT,
-          version: 1,
+          format: CATALOG_JSON_FORMAT_V2,
+          version: 2,
           exportedAt: new Date().toISOString(),
-          catalog: countries.map((country) => ({
-            country: country.label,
-            countryCode: country.id,
-            description: country.desc || '',
-            categories: nodes
-              .filter((node) => node.parent === country.id && !node.deleted)
-              .map((category) => ({
-                name: category.label,
-                description: category.desc || '',
-                brands: nodes
-                  .filter((node) => node.parent === category.id && !node.deleted)
-                  .map((brand) => ({
-                    name: brand.label,
-                    website: brand.website || '',
-                    description: brand.desc || ''
-                  }))
-              }))
-          }))
+          links
         };
+      }
+
+      function flatLinksToNodes(links) {
+        if (!Array.isArray(links) || links.length === 0) {
+          throw new Error('links must contain at least one item.');
+        }
+
+        const root = defaultNodes.find((node) => node.id === 'root');
+        const imported = [{
+          ...root,
+          desc: root.desc || 'Catalog root node.'
+        }];
+        const usedIds = new Set(['root']);
+        const countryIndex = new Map();
+        const categoryIndex = new Map();
+
+        links.forEach((entry, index) => {
+          const urlRaw = String(entry.url || entry.website || entry.link || '').trim();
+          if (!urlRaw) throw new Error(`Link #${index + 1} is missing a url.`);
+
+          let website = '';
+          try {
+            website = normalizeUrl(urlRaw);
+          } catch {
+            throw new Error(`Invalid URL in link #${index + 1}.`);
+          }
+
+          const countryLabel = String(entry.country || entry.countryName || 'Global').trim() || 'Global';
+          const countryCode = slugifyCatalogId(entry.countryCode || countryLabel);
+          const categoryLabel = clean(String(entry.category || entry.categoryName || 'General Links').trim() || 'General Links');
+          const brandName = clean(entry.name || entry.label || entry.title || nameFromUrl(website));
+
+          let countryId;
+          if (countryIndex.has(countryCode)) {
+            countryId = countryIndex.get(countryCode).id;
+          } else {
+            countryId = uniqueCatalogId(countryCode, usedIds);
+            countryIndex.set(countryCode, { id: countryId, label: countryLabel });
+            imported.push({
+              id: countryId,
+              label: countryLabel,
+              parent: 'root',
+              level: 1,
+              type: 'countries',
+              desc: String(entry.countryDescription || entry.countryNotes || '').trim().slice(0, 240)
+            });
+          }
+
+          const categoryKey = `${countryId}::${slugifyCatalogId(categoryLabel)}`;
+          let categoryId;
+          if (categoryIndex.has(categoryKey)) {
+            categoryId = categoryIndex.get(categoryKey);
+          } else {
+            categoryId = uniqueCatalogId(`${countryId}_${slugifyCatalogId(categoryLabel)}`, usedIds);
+            categoryIndex.set(categoryKey, categoryId);
+            imported.push({
+              id: categoryId,
+              label: categoryLabel,
+              parent: countryId,
+              level: 2,
+              type: 'categories',
+              desc: ''
+            });
+          }
+
+          const brandId = uniqueCatalogId(`${categoryId}_${slugifyCatalogId(brandName || website)}`, usedIds);
+          imported.push({
+            id: brandId,
+            label: brandName,
+            parent: categoryId,
+            level: 3,
+            type: 'brands',
+            desc: String(entry.notes || entry.description || entry.desc || '').trim().slice(0, 240),
+            website,
+            brand: true
+          });
+        });
+
+        return imported;
       }
 
       function downloadJsonFile(data, filename) {
@@ -688,7 +776,15 @@
           throw new Error('JSON must be an object.');
         }
 
-        if (data.format === CATALOG_JSON_FORMAT && Array.isArray(data.catalog)) {
+        if (data.format === CATALOG_JSON_FORMAT_V2 && Array.isArray(data.links)) {
+          return flatLinksToNodes(data.links);
+        }
+
+        if (Array.isArray(data.links) && !data.catalog && !data.nodes) {
+          return flatLinksToNodes(data.links);
+        }
+
+        if (data.format === CATALOG_JSON_FORMAT_V1 && Array.isArray(data.catalog)) {
           return nestedCatalogToNodes(data.catalog);
         }
 
@@ -700,7 +796,7 @@
           return nestedCatalogToNodes(data.catalog);
         }
 
-        throw new Error('Unsupported JSON. Use toyza-catalog-v1 with catalog[], or nodes[].');
+        throw new Error('Unsupported JSON. Use toyza-catalog-v2 with links[], or nodes[].');
       }
 
       async function importCatalogFromJson(data) {
@@ -1193,7 +1289,7 @@
 
       $('download-catalog-sample').addEventListener('click', () => {
         downloadJsonFile(buildCatalogSampleJson(), 'catalog-sample.json');
-        showStatus('Sample JSON downloaded. Give inputLinks to AI, then upload the filled catalog.');
+        showStatus('Sample JSON downloaded. Give links[] to AI, then upload the filled file.');
       });
 
       $('download-catalog-current').addEventListener('click', () => {

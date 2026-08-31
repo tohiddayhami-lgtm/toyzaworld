@@ -1,67 +1,31 @@
 {
-  "format": "toyza-catalog-v1",
-  "version": 1,
-  "aiInstructions": "You receive toy brand or supplier website URLs. Return ONLY valid JSON in this exact structure (no markdown). Build catalog[] with: country (use flag emoji + name), countryCode (2-letter lowercase), description, categories[] with name (emoji optional), description, brands[] with name, website (full https URL), description (max 160 chars). Infer the best country and toy category for each link. Group similar brands under the same category.",
-  "inputLinks": [
-    "https://www.lego.com",
-    "https://www.hape.com",
-    "https://www.selecta.de",
-    "https://www.example-new-brand.com"
-  ],
-  "catalog": [
+  "format": "toyza-catalog-v2",
+  "version": 2,
+  "aiInstructions": "Return ONLY valid JSON. For each website URL add one object in links[] with: name, url, country, countryCode (2-letter), category, notes (optional). Group similar toy suppliers under the same country and category. Do not invent nested catalog trees.",
+  "links": [
     {
-      "country": "🇩🇰 Denmark",
+      "name": "LEGO",
+      "url": "https://www.lego.com",
+      "country": "Denmark",
       "countryCode": "dk",
-      "description": "Premium construction toys, creative brick systems, and educational play brands.",
-      "categories": [
-        {
-          "name": "🧱 Construction Toys",
-          "description": "Interlocking bricks, creator systems, and architecture-inspired construction play.",
-          "brands": [
-            {
-              "name": "LEGO",
-              "website": "https://www.lego.com",
-              "description": "Global construction brick systems, creator sets, and educational series."
-            }
-          ]
-        }
-      ]
+      "category": "Construction Toys",
+      "notes": "Global construction brick systems."
     },
     {
-      "country": "🇨🇳 China",
+      "name": "Hape",
+      "url": "https://www.hape.com",
+      "country": "China",
       "countryCode": "cn",
-      "description": "Large-scale toy production for educational, electronic, plush, and wooden toy sourcing.",
-      "categories": [
-        {
-          "name": "🧠 Educational Toys",
-          "description": "STEM kits, learning tablets, coding toys, and classroom-focused play sets.",
-          "brands": [
-            {
-              "name": "Hape",
-              "website": "https://www.hape.com",
-              "description": "Educational wooden and early learning toys with global distribution."
-            }
-          ]
-        }
-      ]
+      "category": "Educational Toys",
+      "notes": "Educational wooden and early learning toys."
     },
     {
-      "country": "🇳🇱 Netherlands",
+      "name": "Selecta",
+      "url": "https://www.selecta.de",
+      "country": "Netherlands",
       "countryCode": "nl",
-      "description": "European toy distribution hub with EU-certified Dutch-quality play brands.",
-      "categories": [
-        {
-          "name": "🪵 Wooden Toys",
-          "description": "Artisan wooden toys, eco blocks, and Montessori-inspired learning products.",
-          "brands": [
-            {
-              "name": "Selecta",
-              "website": "https://www.selecta.de",
-              "description": "Premium wooden baby and toddler toys with European safety certification."
-            }
-          ]
-        }
-      ]
+      "category": "Wooden Toys",
+      "notes": "Premium wooden baby and toddler toys."
     }
   ]
 }
