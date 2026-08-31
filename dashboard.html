@@ -224,6 +224,27 @@
                 </button>
               </div>
 
+              <div class="px-4 py-3 bg-warmOffwhite border-b-2 border-deepNavy/10">
+                <div class="flex flex-col gap-2">
+                  <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-deepNavy/70">JSON for AI import</p>
+                    <p class="text-[10px] text-deepNavy/50 mt-0.5 leading-relaxed">Download the sample, paste your links into <span class="font-mono">inputLinks</span>, ask AI to fill <span class="font-mono">catalog</span>, then upload the JSON here.</p>
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <button id="download-catalog-sample" type="button" class="px-3 py-2 bg-white border-2 border-deepNavy rounded text-[10px] font-bold uppercase tracking-wide hover:bg-deepNavy hover:text-white transition-all">
+                      Download sample
+                    </button>
+                    <button id="download-catalog-current" type="button" class="px-3 py-2 bg-white border-2 border-deepNavy rounded text-[10px] font-bold uppercase tracking-wide hover:bg-delftBlue hover:text-white transition-all">
+                      Export current tree
+                    </button>
+                    <label class="px-3 py-2 bg-brandRed text-white border-2 border-deepNavy rounded text-[10px] font-bold uppercase tracking-wide hover:bg-deepNavy transition-all cursor-pointer">
+                      Upload JSON
+                      <input id="catalog-json-upload" type="file" accept=".json,application/json" class="hidden">
+                    </label>
+                  </div>
+                </div>
+              </div>
+
               <!-- Two-column layout: tree + edit panel -->
               <div class="flex flex-col lg:flex-row min-h-[300px]">
 
@@ -460,6 +481,242 @@
           hidden: Boolean(node.hidden),
           deleted: Boolean(node.deleted)
         }));
+      }
+
+      const CATALOG_JSON_FORMAT = 'toyza-catalog-v1';
+
+      function slugifyCatalogId(value = '') {
+        return String(value)
+          .normalize('NFKD')
+          .replace(/[^\w\s-]/g, '')
+          .trim()
+          .replace(/\s+/g, '_')
+          .replace(/_+/g, '_')
+          .toLowerCase()
+          .slice(0, 24) || 'item';
+      }
+
+      function uniqueCatalogId(base, usedIds) {
+        let candidate = base.slice(0, 40);
+        let counter = 2;
+        while (usedIds.has(candidate)) {
+          candidate = `${base.slice(0, 36)}_${counter}`;
+          counter += 1;
+        }
+        usedIds.add(candidate);
+        return candidate;
+      }
+
+      function buildCatalogSampleJson() {
+        return {
+          format: CATALOG_JSON_FORMAT,
+          version: 1,
+          aiInstructions: 'You receive toy brand or supplier website URLs. Return ONLY valid JSON in this exact structure (no markdown). Build catalog[] with: country (flag emoji + name), countryCode (2-letter lowercase), description, categories[] with name (emoji optional), description, brands[] with name, website (full https URL), description (max 160 chars). Infer the best country and toy category for each link.',
+          inputLinks: [
+            'https://www.lego.com',
+            'https://www.hape.com',
+            'https://www.selecta.de',
+            'https://www.example-new-brand.com'
+          ],
+          catalog: [
+            {
+              country: '🇩🇰 Denmark',
+              countryCode: 'dk',
+              description: 'Premium construction toys, creative brick systems, and educational play brands.',
+              categories: [
+                {
+                  name: '🧱 Construction Toys',
+                  description: 'Interlocking bricks, creator systems, and architecture-inspired construction play.',
+                  brands: [
+                    {
+                      name: 'LEGO',
+                      website: 'https://www.lego.com',
+                      description: 'Global construction brick systems, creator sets, and educational series.'
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        };
+      }
+
+      function exportCurrentCatalogJson() {
+        const countries = nodes.filter((node) => node.parent === 'root' && !node.deleted);
+        return {
+          format: CATALOG_JSON_FORMAT,
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          catalog: countries.map((country) => ({
+            country: country.label,
+            countryCode: country.id,
+            description: country.desc || '',
+            categories: nodes
+              .filter((node) => node.parent === country.id && !node.deleted)
+              .map((category) => ({
+                name: category.label,
+                description: category.desc || '',
+                brands: nodes
+                  .filter((node) => node.parent === category.id && !node.deleted)
+                  .map((brand) => ({
+                    name: brand.label,
+                    website: brand.website || '',
+                    description: brand.desc || ''
+                  }))
+              }))
+          }))
+        };
+      }
+
+      function downloadJsonFile(data, filename) {
+        const blob = new Blob([`${JSON.stringify(data, null, 2)}\n`], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function nestedCatalogToNodes(catalog) {
+        if (!Array.isArray(catalog) || catalog.length === 0) {
+          throw new Error('catalog must contain at least one country.');
+        }
+
+        const root = defaultNodes.find((node) => node.id === 'root');
+        const imported = [{
+          ...root,
+          desc: root.desc || 'Interactive Toy Map root node.'
+        }];
+        const usedIds = new Set(['root']);
+
+        catalog.forEach((countryEntry, countryIndex) => {
+          const countryLabel = clean(countryEntry.country || countryEntry.label || `Country ${countryIndex + 1}`);
+          if (!countryLabel) throw new Error(`Country #${countryIndex + 1} is missing a name.`);
+
+          const countryBase = slugifyCatalogId(countryEntry.countryCode || countryLabel);
+          const countryId = uniqueCatalogId(countryBase, usedIds);
+          imported.push({
+            id: countryId,
+            label: countryLabel,
+            parent: 'root',
+            level: 1,
+            type: 'countries',
+            desc: String(countryEntry.description || countryEntry.desc || '').trim().slice(0, 240)
+          });
+
+          (countryEntry.categories || []).forEach((categoryEntry, categoryIndex) => {
+            const categoryLabel = clean(categoryEntry.name || categoryEntry.label || `Category ${categoryIndex + 1}`);
+            if (!categoryLabel) return;
+
+            const categoryBase = `${countryId}_${slugifyCatalogId(categoryEntry.id || categoryLabel)}`;
+            const categoryId = uniqueCatalogId(categoryBase, usedIds);
+            imported.push({
+              id: categoryId,
+              label: categoryLabel,
+              parent: countryId,
+              level: 2,
+              type: 'categories',
+              desc: String(categoryEntry.description || categoryEntry.desc || '').trim().slice(0, 240)
+            });
+
+            (categoryEntry.brands || categoryEntry.links || []).forEach((brandEntry, brandIndex) => {
+              const brandName = clean(brandEntry.name || brandEntry.label || brandEntry.title || `Brand ${brandIndex + 1}`);
+              const websiteRaw = String(brandEntry.website || brandEntry.url || brandEntry.link || '').trim();
+              if (!brandName && !websiteRaw) return;
+
+              let website = '';
+              if (websiteRaw) {
+                try {
+                  website = normalizeUrl(websiteRaw);
+                } catch {
+                  throw new Error(`Invalid website URL for brand "${brandName || websiteRaw}".`);
+                }
+              }
+
+              const brandBase = `${categoryId}_${slugifyCatalogId(brandEntry.id || brandName || websiteRaw)}`;
+              const brandId = uniqueCatalogId(brandBase, usedIds);
+              imported.push({
+                id: brandId,
+                label: brandName || websiteRaw.replace(/^https?:\/\//i, '').split('/')[0],
+                parent: categoryId,
+                level: 3,
+                type: 'brands',
+                desc: String(brandEntry.description || brandEntry.desc || '').trim().slice(0, 240),
+                website,
+                brand: true
+              });
+            });
+          });
+        });
+
+        return imported;
+      }
+
+      function normalizeImportedFlatNodes(rawNodes) {
+        if (!Array.isArray(rawNodes) || rawNodes.length === 0) {
+          throw new Error('nodes must be a non-empty array.');
+        }
+
+        const hasRoot = rawNodes.some((node) => node.id === 'root');
+        const normalized = rawNodes.map((node) => ({
+          id: String(node.id || '').trim(),
+          label: clean(node.label || node.name || 'Untitled'),
+          parent: node.parent ?? null,
+          level: Number.isFinite(node.level) ? node.level : 0,
+          type: node.type || 'brands',
+          desc: String(node.desc || node.description || '').trim().slice(0, 240),
+          website: node.website ? normalizeUrl(String(node.website)) : '',
+          brand: node.type === 'brands' ? true : Boolean(node.brand),
+          hidden: Boolean(node.hidden),
+          deleted: Boolean(node.deleted)
+        }));
+
+        if (!hasRoot) {
+          const root = defaultNodes.find((node) => node.id === 'root');
+          normalized.unshift({ ...root });
+        }
+
+        normalized.forEach((node) => updateLevel(node));
+        return normalized;
+      }
+
+      function parseCatalogImport(data) {
+        if (!data || typeof data !== 'object') {
+          throw new Error('JSON must be an object.');
+        }
+
+        if (data.format === CATALOG_JSON_FORMAT && Array.isArray(data.catalog)) {
+          return nestedCatalogToNodes(data.catalog);
+        }
+
+        if (Array.isArray(data.nodes)) {
+          return normalizeImportedFlatNodes(data.nodes);
+        }
+
+        if (Array.isArray(data.catalog)) {
+          return nestedCatalogToNodes(data.catalog);
+        }
+
+        throw new Error('Unsupported JSON. Use toyza-catalog-v1 with catalog[], or nodes[].');
+      }
+
+      async function importCatalogFromJson(data) {
+        const importedNodes = parseCatalogImport(data);
+        const countryCount = importedNodes.filter((node) => node.parent === 'root').length;
+        const categoryCount = importedNodes.filter((node) => node.type === 'categories').length;
+        const brandCount = importedNodes.filter((node) => node.type === 'brands').length;
+
+        const confirmed = confirm(
+          `Import this catalog?\n\nCountries: ${countryCount}\nCategories: ${categoryCount}\nBrand links: ${brandCount}\n\nThis replaces the current catalogue tree on the live site.`
+        );
+        if (!confirmed) return;
+
+        nodes = importedNodes;
+        closeEditPanel();
+        await saveNodes(`Catalog imported: ${countryCount} countries, ${categoryCount} categories, ${brandCount} links.`);
       }
 
       async function loadDefaultNodesFromIndex() {
@@ -933,6 +1190,30 @@
       $('panel-close-btn').addEventListener('click', closeEditPanel);
 
       $('add-country-btn').addEventListener('click', () => openAddPanel('root', 'countries'));
+
+      $('download-catalog-sample').addEventListener('click', () => {
+        downloadJsonFile(buildCatalogSampleJson(), 'catalog-sample.json');
+        showStatus('Sample JSON downloaded. Give inputLinks to AI, then upload the filled catalog.');
+      });
+
+      $('download-catalog-current').addEventListener('click', () => {
+        downloadJsonFile(exportCurrentCatalogJson(), 'toyza-catalog-export.json');
+        showStatus('Current catalogue tree exported as JSON.');
+      });
+
+      $('catalog-json-upload').addEventListener('change', async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+          await importCatalogFromJson(data);
+        } catch (error) {
+          showStatus(error.message || 'Could not import JSON file.', true);
+        }
+      });
 
       onAuthStateChanged(auth, async (user) => {
         if (!user) {
