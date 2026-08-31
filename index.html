@@ -395,7 +395,9 @@
             Loading catalog…
           </p>
 
-          <div id="catalog-browser" class="max-h-[65vh] overflow-y-auto divide-y divide-slate-100 bg-[#FAFAF7]">
+          <div id="catalog-country-tabs" class="hidden px-4 sm:px-5 py-3 border-b border-slateLines bg-white gap-2 flex flex-wrap"></div>
+
+          <div id="catalog-browser" class="max-h-[65vh] overflow-y-auto bg-[#FAFAF7] p-3 sm:p-4">
             <!-- Filled via JS -->
           </div>
         </div>
@@ -857,14 +859,23 @@
       }
 
       function mergeMapNodes(defaultNodes, savedNodes) {
-        const savedById = new Map((savedNodes || []).map(node => [node.id, node]));
-        const merged = defaultNodes.map(defaultNode => ({
-          ...defaultNode,
-          ...(savedById.get(defaultNode.id) || {})
+        if (!Array.isArray(savedNodes) || savedNodes.length === 0) {
+          return defaultNodes.map((node) => ({ ...node }));
+        }
+
+        const defaultById = new Map(defaultNodes.map((node) => [node.id, node]));
+        const activeSaved = savedNodes.filter((node) => node && node.id && !node.deleted);
+        const merged = activeSaved.map((saved) => ({
+          ...(defaultById.get(saved.id) || {}),
+          ...saved,
+          deleted: false
         }));
-        const defaultIds = new Set(defaultNodes.map(node => node.id));
-        const customSaved = (savedNodes || []).filter(node => !defaultIds.has(node.id));
-        return [...merged, ...customSaved];
+
+        if (!merged.some((node) => node.id === 'root')) {
+          merged.unshift({ ...(defaultById.get('root') || defaultNodes[0]) });
+        }
+
+        return merged;
       }
 
       async function loadSavedToyzaMapConfig() {
@@ -1736,7 +1747,7 @@
         g.innerHTML = pathHTML;
       }
 
-      let catalogOpenCountryId = null;
+      let catalogActiveCountryId = null;
       let catalogSearchQuery = '';
 
       function escapeCatalogHtml(value = '') {
@@ -1749,32 +1760,91 @@
         }[char]));
       }
 
-      function catalogBrandRows(category, brands) {
-        if (!brands.length) {
-          return '<p class="px-4 py-2 text-[11px] text-deepNavy/35 italic">No links in this category yet.</p>';
+      function brandInitial(label = '') {
+        const trimmed = String(label).trim();
+        if (!trimmed) return '?';
+        const letter = trimmed.replace(/^[^\p{L}\p{N}]+/u, '').charAt(0);
+        return (letter || trimmed.charAt(0) || '?').toUpperCase();
+      }
+
+      function renderBrandCard(brand, showPath = false) {
+        const category = nodesById.get(brand.parent);
+        const country = category ? nodesById.get(category.parent) : null;
+        const path = [country?.label, category?.label].filter(Boolean).join(' › ');
+        const safeWebsite = escapeCatalogHtml(brand.website || '');
+        const safeLabel = escapeCatalogHtml(brand.label);
+        const initial = escapeCatalogHtml(brandInitial(brand.label));
+        let domain = '';
+        try { domain = new URL(brand.website || '').hostname.replace(/^www\./, ''); } catch {}
+
+        return `
+          <article class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl hover:border-deepNavy hover:shadow-[2px_2px_0px_#1D3557] transition-all">
+            <div class="w-10 h-10 shrink-0 rounded-lg bg-brandRed text-white border-2 border-deepNavy font-display font-black text-sm flex items-center justify-center shadow-[2px_2px_0px_#1D3557]">
+              ${initial}
+            </div>
+            <button type="button" onclick="openMobileDetail('${escapeCatalogHtml(brand.id)}')" class="flex-1 min-w-0 text-left">
+              ${showPath && path ? `<p class="font-mono text-[9px] uppercase tracking-wider text-deepNavy/45 truncate mb-0.5">${escapeCatalogHtml(path)}</p>` : ''}
+              <p class="font-sans text-sm font-bold text-deepNavy truncate">${safeLabel}</p>
+              ${domain ? `<p class="font-mono text-[10px] text-deepNavy/40 truncate">${escapeCatalogHtml(domain)}</p>` : ''}
+            </button>
+            ${brand.website ? `
+              <a href="${safeWebsite}" target="_blank" rel="noopener noreferrer" class="shrink-0 px-3 py-2 bg-brandRed text-white border-2 border-deepNavy rounded-lg text-[10px] font-bold uppercase tracking-wide hover:bg-deepNavy transition-colors shadow-[2px_2px_0px_#1D3557]">
+                Visit
+              </a>
+            ` : `
+              <button type="button" onclick="openMobileDetail('${escapeCatalogHtml(brand.id)}')" class="shrink-0 px-3 py-2 bg-deepNavy text-white border-2 border-deepNavy rounded-lg text-[10px] font-bold uppercase">Info</button>
+            `}
+          </article>
+        `;
+      }
+
+      function renderCategoryCard(category, brands) {
+        return `
+          <section class="bg-white border-2 border-deepNavy rounded-xl overflow-hidden shadow-[4px_4px_0px_#1D3557]">
+            <div class="px-4 py-3 bg-toyOrange/20 border-b-2 border-deepNavy/10 flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-toyOrange border border-deepNavy shrink-0"></span>
+                  <h3 class="font-sans font-extrabold text-sm text-deepNavy truncate">${escapeCatalogHtml(category.label)}</h3>
+                </div>
+                <p class="font-sans text-[10px] text-deepNavy/50 mt-1">${brands.length} supplier link${brands.length === 1 ? '' : 's'}</p>
+              </div>
+              <button type="button" onclick="openMobileDetail('${escapeCatalogHtml(category.id)}')" class="shrink-0 text-[10px] font-bold uppercase text-delftBlue hover:text-brandRed">Info</button>
+            </div>
+            <div class="p-3 flex flex-col gap-2 bg-warmOffwhite">
+              ${brands.length
+                ? brands.map((brand) => renderBrandCard(brand)).join('')
+                : '<p class="text-[11px] text-deepNavy/40 italic px-1">No links in this category yet.</p>'}
+            </div>
+          </section>
+        `;
+      }
+
+      function renderCountryTabs(countries) {
+        const tabs = document.getElementById('catalog-country-tabs');
+        if (!tabs) return;
+
+        if (!countries.length || catalogSearchQuery.trim()) {
+          tabs.classList.add('hidden');
+          tabs.innerHTML = '';
+          return;
         }
 
-        return brands.map((brand) => {
-          const safeWebsite = escapeCatalogHtml(brand.website || '');
-          const safeLabel = escapeCatalogHtml(brand.label);
-          let domain = '';
-          try { domain = new URL(brand.website || '').hostname.replace(/^www\./, ''); } catch {}
+        if (!catalogActiveCountryId || !countries.some((country) => country.id === catalogActiveCountryId)) {
+          catalogActiveCountryId = countries[0].id;
+        }
+
+        tabs.classList.remove('hidden');
+        tabs.innerHTML = countries.map((country) => {
+          const active = catalogActiveCountryId === country.id;
+          const linkCount = catalogNodes()
+            .filter((node) => node.parent === country.id)
+            .reduce((total, category) => total + catalogNodes().filter((node) => node.parent === category.id).length, 0);
 
           return `
-            <div class="flex items-center gap-3 px-4 py-2.5 bg-white hover:bg-slate-50 border-b border-slate-50 last:border-b-0">
-              <span class="w-1.5 h-1.5 rounded-full bg-brandRed shrink-0"></span>
-              <button type="button" onclick="openMobileDetail('${escapeCatalogHtml(brand.id)}')" class="flex-1 min-w-0 text-left">
-                <span class="block font-sans text-sm font-bold text-deepNavy truncate">${safeLabel}</span>
-                ${domain ? `<span class="block font-mono text-[10px] text-deepNavy/40 truncate">${escapeCatalogHtml(domain)}</span>` : ''}
-              </button>
-              ${brand.website ? `
-                <a href="${safeWebsite}" target="_blank" rel="noopener noreferrer" class="shrink-0 px-3 py-1.5 bg-brandRed text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-deepNavy transition-colors">
-                  Visit
-                </a>
-              ` : `
-                <button type="button" onclick="openMobileDetail('${escapeCatalogHtml(brand.id)}')" class="shrink-0 px-3 py-1.5 bg-deepNavy text-white rounded text-[10px] font-bold uppercase">Info</button>
-              `}
-            </div>
+            <button type="button" onclick="selectCatalogCountry('${escapeCatalogHtml(country.id)}')" class="px-3 py-2 rounded-full border-2 text-[11px] font-bold uppercase tracking-wide transition-all ${active ? 'bg-delftBlue text-white border-deepNavy shadow-[2px_2px_0px_#1D3557]' : 'bg-white text-deepNavy border-slateLines hover:border-deepNavy'}">
+              ${escapeCatalogHtml(country.label)} <span class="opacity-70">${linkCount}</span>
+            </button>
           `;
         }).join('');
       }
@@ -1789,6 +1859,8 @@
         const countries = visibleNodes.filter((node) => node.parent === 'root');
         const categories = visibleNodes.filter((node) => node.type === 'categories');
         const brands = visibleNodes.filter((node) => node.type === 'brands' && node.brand);
+
+        renderCountryTabs(countries);
 
         if (statsEl) {
           statsEl.textContent = query
@@ -1809,98 +1881,65 @@
 
           if (matches.length === 0) {
             container.innerHTML = `
-              <div class="p-8 text-center">
-                <p class="font-display font-black text-xl text-deepNavy">No matches</p>
-                <p class="font-sans text-xs text-deepNavy/50 mt-1">Try a brand name, category, country, or website URL.</p>
+              <div class="p-10 text-center bg-white border-2 border-dashed border-slateLines rounded-xl">
+                <p class="font-display font-black text-2xl text-deepNavy">No matches</p>
+                <p class="font-sans text-sm text-deepNavy/50 mt-2">Try a brand name, category, country, or website URL.</p>
               </div>
             `;
             if (statsEl) statsEl.textContent = `0 links match "${query}"`;
             return;
           }
 
-          container.innerHTML = matches.map((brand) => {
-            const category = nodesById.get(brand.parent);
-            const country = category ? nodesById.get(category.parent) : null;
-            const path = [country?.label, category?.label].filter(Boolean).join(' › ');
-            const safeWebsite = escapeCatalogHtml(brand.website || '');
-
-            return `
-              <div class="flex items-center gap-3 px-4 py-3 bg-white">
-                <div class="flex-1 min-w-0">
-                  <p class="font-mono text-[9px] uppercase tracking-wider text-deepNavy/45 truncate">${escapeCatalogHtml(path || 'Catalog link')}</p>
-                  <p class="font-sans text-sm font-bold text-deepNavy truncate">${escapeCatalogHtml(brand.label)}</p>
-                </div>
-                ${brand.website ? `
-                  <a href="${safeWebsite}" target="_blank" rel="noopener noreferrer" class="shrink-0 px-3 py-1.5 bg-brandRed text-white rounded text-[10px] font-bold uppercase tracking-wide hover:bg-deepNavy transition-colors">
-                    Visit
-                  </a>
-                ` : `
-                  <button type="button" onclick="openMobileDetail('${escapeCatalogHtml(brand.id)}')" class="shrink-0 px-3 py-1.5 bg-deepNavy text-white rounded text-[10px] font-bold uppercase">Info</button>
-                `}
-              </div>
-            `;
-          }).join('');
-
+          container.innerHTML = `
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              ${matches.map((brand) => renderBrandCard(brand, true)).join('')}
+            </div>
+          `;
           if (statsEl) statsEl.textContent = `${matches.length} link${matches.length === 1 ? '' : 's'} match "${query}"`;
           return;
         }
 
         if (countries.length === 0) {
-          container.innerHTML = '<p class="p-8 text-center text-sm text-deepNavy/50">No catalog entries yet.</p>';
+          container.innerHTML = '<div class="p-10 text-center bg-white border-2 border-dashed border-slateLines rounded-xl text-sm text-deepNavy/50">No catalog entries yet.</div>';
           return;
         }
 
-        container.innerHTML = countries.map((country) => {
-          const countryCategories = visibleNodes.filter((node) => node.parent === country.id);
-          const countryOpen = catalogOpenCountryId === country.id;
-          const linkCount = countryCategories.reduce(
-            (total, category) => total + visibleNodes.filter((node) => node.parent === category.id).length,
-            0
-          );
-          const safeCountryId = escapeCatalogHtml(country.id);
+        const activeCountry = countries.find((country) => country.id === catalogActiveCountryId) || countries[0];
+        catalogActiveCountryId = activeCountry.id;
+        const countryCategories = visibleNodes.filter((node) => node.parent === activeCountry.id);
+        const linkCount = countryCategories.reduce(
+          (total, category) => total + visibleNodes.filter((node) => node.parent === category.id).length,
+          0
+        );
 
-          const categoriesHtml = countryCategories.length
-            ? countryCategories.map((category) => {
-                const categoryBrands = visibleNodes.filter((node) => node.parent === category.id);
-                return `
-                  <section class="border-t border-slate-100 bg-white">
-                    <div class="flex items-center justify-between gap-2 px-4 py-2.5 bg-[#FAFAF7]">
-                      <div class="min-w-0">
-                        <p class="font-sans text-sm font-bold text-deepNavy truncate">${escapeCatalogHtml(category.label)}</p>
-                        <p class="font-sans text-[10px] text-deepNavy/45">${categoryBrands.length} link${categoryBrands.length === 1 ? '' : 's'}</p>
-                      </div>
-                      <button type="button" onclick="openMobileDetail('${escapeCatalogHtml(category.id)}')" class="shrink-0 text-[10px] font-bold text-delftBlue uppercase">Info</button>
-                    </div>
-                    <div>${catalogBrandRows(category, categoryBrands)}</div>
-                  </section>
-                `;
-              }).join('')
-            : '<p class="px-4 py-3 text-[11px] text-deepNavy/35 italic bg-white">No categories in this country yet.</p>';
-
-          return `
-            <article class="bg-white">
-              <button type="button" onclick="toggleCatalogCountry('${safeCountryId}')" class="w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-slate-50 transition-colors">
-                <div class="min-w-0">
-                  <p class="font-display font-black text-lg text-deepNavy truncate">${escapeCatalogHtml(country.label)}</p>
-                  <p class="font-sans text-[10px] text-deepNavy/45 mt-0.5">${countryCategories.length} categories · ${linkCount} links</p>
-                </div>
-                <span class="shrink-0 px-3 py-1 rounded-full border border-deepNavy text-[10px] font-bold uppercase ${countryOpen ? 'bg-deepNavy text-white' : 'bg-white text-deepNavy'}">
-                  ${countryOpen ? 'Close' : 'Open'}
-                </span>
+        container.innerHTML = `
+          <div class="mb-4 bg-white border-2 border-deepNavy rounded-xl p-4 shadow-[3px_3px_0px_#1D3557]">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="font-mono text-[9px] uppercase tracking-[0.2em] text-brandRed">Selected country</p>
+                <h3 class="font-display font-black text-2xl text-deepNavy mt-1">${escapeCatalogHtml(activeCountry.label)}</h3>
+                <p class="font-sans text-xs text-deepNavy/60 mt-1">${countryCategories.length} categories · ${linkCount} links</p>
+              </div>
+              <button type="button" onclick="openMobileDetail('${escapeCatalogHtml(activeCountry.id)}')" class="shrink-0 px-3 py-2 border-2 border-deepNavy rounded-lg text-[10px] font-bold uppercase hover:bg-deepNavy hover:text-white transition-colors">
+                Country info
               </button>
-              ${countryOpen ? `<div class="border-t-2 border-deepNavy/10">${categoriesHtml}</div>` : ''}
-            </article>
-          `;
-        }).join('');
+            </div>
+          </div>
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            ${countryCategories.length
+              ? countryCategories.map((category) => renderCategoryCard(category, visibleNodes.filter((node) => node.parent === category.id))).join('')
+              : '<div class="xl:col-span-2 p-8 text-center bg-white border-2 border-dashed border-slateLines rounded-xl text-sm text-deepNavy/50">No categories in this country yet.</div>'}
+          </div>
+        `;
       }
 
-      function toggleCatalogCountry(countryId) {
-        catalogOpenCountryId = catalogOpenCountryId === countryId ? null : countryId;
+      function selectCatalogCountry(countryId) {
+        catalogActiveCountryId = countryId;
         buildCatalogBrowser();
       }
 
       function collapseCatalogBrowser() {
-        catalogOpenCountryId = null;
+        catalogActiveCountryId = null;
         clearCatalogSearch();
       }
 
@@ -1911,7 +1950,6 @@
 
       function handleCatalogSearch(query) {
         catalogSearchQuery = query;
-        catalogOpenCountryId = null;
         buildCatalogBrowser();
       }
 

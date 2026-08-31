@@ -461,15 +461,21 @@
         node.level = parent ? parent.level + 1 : 1;
       }
 
-      function markDeleted(nodeId) {
-        const node = nodes.find((item) => item.id === nodeId);
-        if (!node) return;
-        node.deleted = true;
-        nodes.filter((item) => item.parent === nodeId).forEach((child) => markDeleted(child.id));
+      function removeNodeTree(nodeId) {
+        if (nodeId === 'root') return;
+        const removeIds = new Set();
+        const collect = (id) => {
+          removeIds.add(id);
+          nodes.filter((item) => item.parent === id).forEach((child) => collect(child.id));
+        };
+        collect(nodeId);
+        nodes = nodes.filter((item) => !removeIds.has(item.id));
       }
 
       function serializeNodes() {
-        return nodes.map((node) => ({
+        return nodes
+          .filter((node) => !node.deleted)
+          .map((node) => ({
           id: node.id,
           label: node.label,
           parent: node.parent,
@@ -820,14 +826,23 @@
       }
 
       function mergeNodes(defaultNodes, savedNodes) {
-        const savedById = new Map((savedNodes || []).map((node) => [node.id, node]));
-        const merged = defaultNodes.map((defaultNode) => ({
-          ...defaultNode,
-          ...(savedById.get(defaultNode.id) || {})
+        if (!Array.isArray(savedNodes) || savedNodes.length === 0) {
+          return defaultNodes.map((node) => ({ ...node }));
+        }
+
+        const defaultById = new Map(defaultNodes.map((node) => [node.id, node]));
+        const activeSaved = savedNodes.filter((node) => node && node.id && !node.deleted);
+        const merged = activeSaved.map((saved) => ({
+          ...(defaultById.get(saved.id) || {}),
+          ...saved,
+          deleted: false
         }));
-        const defaultIds = new Set(defaultNodes.map((node) => node.id));
-        const customSaved = (savedNodes || []).filter((node) => !defaultIds.has(node.id));
-        return [...merged, ...customSaved];
+
+        if (!merged.some((node) => node.id === 'root')) {
+          merged.unshift({ ...(defaultById.get('root') || defaultNodes[0]) });
+        }
+
+        return merged;
       }
 
       async function loadNodes() {
@@ -963,8 +978,6 @@
       }
 
       // ─── TREE BUILDER ──────────────────────────────────────────────────────
-      const TREE_CHV = `<svg class="tree-chevron w-3 h-3 shrink-0 transition-transform duration-200" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>`;
-
       let treeMode = null;     // 'edit' | 'add'
       let treeTargetId = null; // edit → nodeId; add → parentId
       let treeAddType = null;  // 'countries' | 'categories' | 'brands'
@@ -975,81 +988,74 @@
 
         const countries = nodes.filter(n => n.parent === 'root' && !n.deleted);
         if (countries.length === 0) {
-          container.innerHTML = '<p class="text-xs text-deepNavy/40 italic px-4 py-6 text-center">No countries yet — click + Country to add one.</p>';
+          container.innerHTML = '<p class="text-xs text-deepNavy/40 italic px-4 py-8 text-center">No countries yet — click + Country to add one.</p>';
           return;
         }
 
-        container.innerHTML = countries.map(country => {
-          const hiddenTag = country.hidden ? '<span class="ml-1 text-[9px] font-bold text-white/40 uppercase">hidden</span>' : '';
+        container.innerHTML = `<div class="p-4 flex flex-col gap-4">${countries.map(country => {
+          const hiddenTag = country.hidden ? '<span class="ml-2 text-[9px] font-bold text-brandRed uppercase">hidden</span>' : '';
           const categories = nodes.filter(n => n.parent === country.id && !n.deleted);
+          const linkCount = categories.reduce((total, cat) => total + nodes.filter(n => n.parent === cat.id && !n.deleted).length, 0);
 
           const catsHtml = categories.length === 0
-            ? '<div class="px-4 py-2 text-[10px] text-deepNavy/30 italic">No categories — add one →</div>'
-            : categories.map(cat => {
-                const catHidden = cat.hidden ? '<span class="ml-1 text-[9px] text-deepNavy/30 uppercase font-bold">hidden</span>' : '';
+            ? '<p class="text-[11px] text-deepNavy/35 italic px-1">No categories yet.</p>'
+            : `<div class="grid grid-cols-1 gap-3">${categories.map(cat => {
+                const catHidden = cat.hidden ? '<span class="ml-1 text-[9px] text-brandRed uppercase font-bold">hidden</span>' : '';
                 const brands = nodes.filter(n => n.parent === cat.id && !n.deleted);
-
                 const brandsHtml = brands.length === 0
-                  ? '<div class="px-6 py-1.5 text-[10px] text-deepNavy/25 italic">No brands</div>'
+                  ? '<p class="text-[10px] text-deepNavy/30 italic">No brand links</p>'
                   : brands.map(brand => {
-                      const bHidden = brand.hidden ? '<span class="text-[9px] text-deepNavy/30 uppercase font-bold ml-1">hidden</span>' : '';
+                      const bHidden = brand.hidden ? '<span class="text-[9px] text-brandRed uppercase font-bold ml-1">hidden</span>' : '';
                       let domain = '';
                       try { domain = new URL(brand.website || '').hostname.replace('www.', ''); } catch {}
                       return `
-                        <div class="flex items-center gap-1.5 px-6 py-2 hover:bg-slate-50 border-b border-slate-50 last:border-b-0">
-                          <span class="w-1 h-3 bg-brandRed/60 rounded-full shrink-0"></span>
-                          <span class="text-xs text-deepNavy font-medium flex-1 truncate">${brand.label}${bHidden}</span>
-                          ${domain ? `<span class="text-[9px] text-deepNavy/30 font-mono shrink-0 hidden sm:block">${domain}</span>` : ''}
-                          <button type="button" data-edit="${brand.id}" class="tree-edit-btn shrink-0 text-[9px] font-bold text-white bg-deepNavy/50 hover:bg-deepNavy px-2 py-0.5 rounded">Edit</button>
+                        <div class="flex items-center gap-2 p-2.5 bg-warmOffwhite border border-slate-200 rounded-lg">
+                          <span class="w-7 h-7 shrink-0 rounded-md bg-brandRed text-white text-[10px] font-black flex items-center justify-center border border-deepNavy">${(brand.label || '?').charAt(0).toUpperCase()}</span>
+                          <div class="flex-1 min-w-0">
+                            <p class="text-xs font-bold text-deepNavy truncate">${brand.label}${bHidden}</p>
+                            ${domain ? `<p class="text-[9px] font-mono text-deepNavy/40 truncate">${domain}</p>` : ''}
+                          </div>
+                          <button type="button" data-edit="${brand.id}" class="tree-edit-btn shrink-0 text-[9px] font-bold text-white bg-deepNavy px-2 py-1 rounded">Edit</button>
                         </div>`;
                     }).join('');
 
                 return `
-                  <details class="border-l-[3px] border-l-toyOrange">
-                    <summary class="list-none cursor-pointer flex items-center gap-1.5 px-3 py-2 bg-[#FAFAF7] hover:bg-orange-50 select-none border-b border-slate-100">
-                      <span class="text-toyOrange">${TREE_CHV}</span>
-                      <span class="font-bold text-xs text-deepNavy flex-1 truncate">${cat.label}${catHidden}</span>
-                      <span class="text-[9px] text-deepNavy/30 tabular-nums shrink-0">${brands.length}</span>
-                      <div class="flex gap-1 shrink-0" onclick="event.stopPropagation()">
-                        <button type="button" data-edit="${cat.id}" class="tree-edit-btn text-[9px] font-bold text-white bg-deepNavy/40 hover:bg-deepNavy px-1.5 py-0.5 rounded">Edit</button>
-                        <button type="button" data-add-parent="${cat.id}" data-add-type="brands" class="tree-add-btn text-[9px] font-bold text-white bg-toyOrange hover:bg-orange-500 px-1.5 py-0.5 rounded">+ Brand</button>
+                  <section class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                    <div class="flex items-center justify-between gap-2 px-3 py-2.5 bg-toyOrange/15 border-b border-slate-200">
+                      <div class="min-w-0">
+                        <p class="font-bold text-xs text-deepNavy truncate">${cat.label}${catHidden}</p>
+                        <p class="text-[9px] text-deepNavy/45">${brands.length} links</p>
                       </div>
-                    </summary>
-                    <div class="bg-white divide-y divide-slate-50">${brandsHtml}</div>
-                  </details>`;
-              }).join('');
+                      <div class="flex gap-1 shrink-0">
+                        <button type="button" data-edit="${cat.id}" class="tree-edit-btn text-[9px] font-bold text-white bg-deepNavy/70 hover:bg-deepNavy px-2 py-1 rounded">Edit</button>
+                        <button type="button" data-add-parent="${cat.id}" data-add-type="brands" class="tree-add-btn text-[9px] font-bold text-white bg-toyOrange hover:bg-orange-500 px-2 py-1 rounded">+ Brand</button>
+                      </div>
+                    </div>
+                    <div class="p-2 flex flex-col gap-2">${brandsHtml}</div>
+                  </section>`;
+              }).join('')}</div>`;
 
           return `
-            <details class="border-b-2 border-deepNavy/10">
-              <summary class="list-none cursor-pointer flex items-center gap-2 px-3 py-3 bg-white hover:bg-slate-50 select-none">
-                <span class="text-delftBlue">${TREE_CHV}</span>
-                <span class="font-bold text-sm text-deepNavy flex-1 truncate">${country.label}${hiddenTag}</span>
-                <span class="text-[10px] text-deepNavy/30 tabular-nums shrink-0">${categories.length} cats</span>
-                <div class="flex gap-1 shrink-0" onclick="event.stopPropagation()">
-                  <button type="button" data-edit="${country.id}" class="tree-edit-btn text-[9px] font-bold text-white bg-delftBlue hover:bg-blue-600 px-2 py-1 rounded">Edit</button>
-                  <button type="button" data-add-parent="${country.id}" data-add-type="categories" class="tree-add-btn text-[9px] font-bold text-white bg-deepNavy/50 hover:bg-deepNavy px-2 py-1 rounded">+ Cat</button>
+            <article class="bg-white border-2 border-deepNavy rounded-xl overflow-hidden shadow-[3px_3px_0px_#1D3557]">
+              <div class="flex items-center justify-between gap-3 px-4 py-3 bg-delftBlue text-white">
+                <div class="min-w-0">
+                  <p class="font-display font-black text-lg truncate">${country.label}${hiddenTag}</p>
+                  <p class="text-[10px] text-white/70 mt-0.5">${categories.length} categories · ${linkCount} links</p>
                 </div>
-              </summary>
-              <div class="divide-y divide-slate-100">${catsHtml}</div>
-            </details>`;
-        }).join('');
+                <div class="flex gap-1 shrink-0">
+                  <button type="button" data-edit="${country.id}" class="tree-edit-btn text-[9px] font-bold text-delftBlue bg-white hover:bg-warmOffwhite px-2 py-1 rounded">Edit</button>
+                  <button type="button" data-add-parent="${country.id}" data-add-type="categories" class="tree-add-btn text-[9px] font-bold text-white bg-deepNavy hover:bg-black px-2 py-1 rounded">+ Cat</button>
+                </div>
+              </div>
+              <div class="p-3 bg-[#FAFAF7]">${catsHtml}</div>
+            </article>`;
+        }).join('')}</div>`;
 
-        // Attach tree button event listeners via delegation
         container.querySelectorAll('.tree-edit-btn').forEach(btn => {
           btn.addEventListener('click', () => openEditPanel(btn.dataset.edit));
         });
         container.querySelectorAll('.tree-add-btn').forEach(btn => {
           btn.addEventListener('click', () => openAddPanel(btn.dataset.addParent, btn.dataset.addType));
-        });
-
-        // Chevron rotation for details
-        container.querySelectorAll('details').forEach(d => {
-          const chevron = d.querySelector(':scope > summary .tree-chevron');
-          if (!chevron) return;
-          if (d.open) chevron.style.transform = 'rotate(180deg)';
-          d.addEventListener('toggle', () => {
-            chevron.style.transform = d.open ? 'rotate(180deg)' : '';
-          });
         });
       }
 
@@ -1278,7 +1284,7 @@
         const node = nodes.find(n => n.id === treeTargetId);
         if (!node) return;
         if (!confirm(`Delete "${node.label}" and all its children?`)) return;
-        markDeleted(node.id);
+        removeNodeTree(node.id);
         closeEditPanel();
         await saveNodes('Deleted.');
       });
